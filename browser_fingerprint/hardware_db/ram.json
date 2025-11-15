@@ -1,0 +1,81 @@
+{
+  "database_name": "RAM Database",
+  "version": "1.0.0",
+  "last_updated": "2025-10-15",
+  "description": "Realistic RAM configurations with market share",
+  
+  "ram_configs": [
+    {
+      "total_gb": 4,
+      "device_memory_gb": 4,
+      "type": "DDR3",
+      "market_share": 5,
+      "typical_use": "Basic office",
+      "min_cpu_tier": "entry"
+    },
+    {
+      "total_gb": 8,
+      "device_memory_gb": 8,
+      "type": "DDR4",
+      "market_share": 25,
+      "typical_use": "Standard usage",
+      "min_cpu_tier": "entry"
+    },
+    {
+      "total_gb": 12,
+      "device_memory_gb": 8,
+      "type": "DDR4",
+      "market_share": 8,
+      "typical_use": "Light gaming/work",
+      "min_cpu_tier": "entry"
+    },
+    {
+      "total_gb": 16,
+      "device_memory_gb": 8,
+      "type": "DDR4",
+      "market_share": 35,
+      "typical_use": "Gaming/productivity",
+      "min_cpu_tier": "mid"
+    },
+    {
+      "total_gb": 24,
+      "device_memory_gb": 16,
+      "type": "DDR4",
+      "market_share": 5,
+      "typical_use": "Heavy multitasking",
+      "min_cpu_tier": "mid"
+    },
+    {
+      "total_gb": 32,
+      "device_memory_gb": 16,
+      "type": "DDR4/DDR5",
+      "market_share": 15,
+      "typical_use": "Content creation",
+      "min_cpu_tier": "high"
+    },
+    {
+      "total_gb": 48,
+      "device_memory_gb": 16,
+      "type": "DDR4/DDR5",
+      "market_share": 3,
+      "typical_use": "Professional workstation",
+      "min_cpu_tier": "high"
+    },
+    {
+      "total_gb": 64,
+      "device_memory_gb": 16,
+      "type": "DDR4/DDR5",
+      "market_share": 3,
+      "typical_use": "Workstation/server",
+      "min_cpu_tier": "enthusiast"
+    },
+    {
+      "total_gb": 128,
+      "device_memory_gb": 16,
+      "type": "DDR5",
+      "market_share": 1,
+      "typical_use": "High-end workstation",
+      "min_cpu_tier": "enthusiast"
+    }
+  ]
+}

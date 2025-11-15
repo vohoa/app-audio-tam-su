@@ -1,0 +1,10 @@
+chrome_profiles
+drivers
+chrome-linux64/
+chrome_driver/
+venv
+__pycache__
+logs/*.*
+# Authentication credentials
+.credentials
+audio_downloads

@@ -1,0 +1,32 @@
+{
+  "intros": [
+    {
+      "name": "Đơn Giản",
+      "content": "Xin chào các bé! Hôm nay cô sẽ kể cho các bé nghe câu chuyện {story_name}, chương: {chapter_title}\n\n"
+    },
+    {
+      "name": "Vui Vẻ - Chỉ Tên Truyện",
+      "content": "Chào các bạn nhỏ! Các bạn đã sẵn sàng chưa? Hôm nay chúng ta cùng nghe tiếp truyện {story_name}\n\n"
+    },
+    {
+      "name": "Ấm Áp",
+      "content": "Con yêu ơi, đến giờ nghe chuyện rồi! Mẹ sẽ kể cho con nghe tiếp câu chuyện {story_name}, chương hôm nay là: {chapter_title}\n\n"
+    },
+    {
+      "name": "Sinh Động",
+      "content": "Ê các bạn ơi! Tụi mình lại tiếp tục với truyện {story_name} nào, hôm nay là chương: {chapter_title}\n\n"
+    },
+    {
+      "name": "Nhẹ Nhàng",
+      "content": "Các em thân mến, cô xin mời các em lắng nghe tiếp truyện {story_name}, chương: {chapter_title}\n\n"
+    },
+    {
+      "name": "Chỉ Tên Truyện",
+      "content": "Xin chào các bé! Hôm nay cô sẽ kể cho các bé nghe câu chuyện: {story_name}\n\n"
+    },
+    {
+      "name": "Chỉ Tên Chương",
+      "content": "Xin chào các bé! Hôm nay cô sẽ kể cho các bé nghe: {chapter_title}\n\n"
+    }
+  ]
+}

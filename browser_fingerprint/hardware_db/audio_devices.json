@@ -1,0 +1,66 @@
+{
+  "database_name": "Audio Device Database",
+  "version": "1.0.0",
+  "last_updated": "2025-10-15",
+  "description": "Common sound cards and audio devices",
+  
+  "integrated_audio": [
+    {
+      "name": "Realtek High Definition Audio",
+      "chipset": "ALC887",
+      "market_share": 25,
+      "manufacturer": "Realtek"
+    },
+    {
+      "name": "Realtek High Definition Audio",
+      "chipset": "ALC892",
+      "market_share": 20,
+      "manufacturer": "Realtek"
+    },
+    {
+      "name": "Realtek High Definition Audio",
+      "chipset": "ALC897",
+      "market_share": 15,
+      "manufacturer": "Realtek"
+    },
+    {
+      "name": "Realtek High Definition Audio",
+      "chipset": "ALC1200",
+      "market_share": 10,
+      "manufacturer": "Realtek"
+    },
+    {
+      "name": "Intel High Definition Audio",
+      "chipset": "Intel Display Audio",
+      "market_share": 15,
+      "manufacturer": "Intel"
+    },
+    {
+      "name": "AMD High Definition Audio Device",
+      "chipset": "AMD Audio CoProcessor",
+      "market_share": 10,
+      "manufacturer": "AMD"
+    }
+  ],
+  
+  "dedicated_audio": [
+    {
+      "name": "Creative Sound Blaster",
+      "model": "Sound Blaster Z",
+      "market_share": 2,
+      "manufacturer": "Creative"
+    },
+    {
+      "name": "ASUS Xonar",
+      "model": "Xonar DGX",
+      "market_share": 1,
+      "manufacturer": "ASUS"
+    },
+    {
+      "name": "Creative Sound BlasterX",
+      "model": "AE-5 Plus",
+      "market_share": 1,
+      "manufacturer": "Creative"
+    }
+  ]
+}

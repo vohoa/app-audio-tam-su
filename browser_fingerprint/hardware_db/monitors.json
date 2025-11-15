@@ -1,0 +1,148 @@
+{
+  "database_name": "Monitor Database",
+  "version": "1.0.0",
+  "last_updated": "2025-10-15",
+  "description": "Common monitor resolutions and specifications",
+  
+  "monitors": [
+    {
+      "resolution": "1280x720",
+      "width": 1280,
+      "height": 720,
+      "aspect_ratio": "16:9",
+      "name": "HD",
+      "market_share": 3,
+      "common_sizes": ["18.5\"", "19.5\""],
+      "refresh_rate": [60],
+      "color_depth": 24
+    },
+    {
+      "resolution": "1366x768",
+      "width": 1366,
+      "height": 768,
+      "aspect_ratio": "16:9",
+      "name": "HD",
+      "market_share": 15,
+      "common_sizes": ["15.6\"", "17\""],
+      "refresh_rate": [60],
+      "color_depth": 24
+    },
+    {
+      "resolution": "1440x900",
+      "width": 1440,
+      "height": 900,
+      "aspect_ratio": "16:10",
+      "name": "WXGA+",
+      "market_share": 8,
+      "common_sizes": ["19\"", "20\""],
+      "refresh_rate": [60, 75],
+      "color_depth": 24
+    },
+    {
+      "resolution": "1536x864",
+      "width": 1536,
+      "height": 864,
+      "aspect_ratio": "16:9",
+      "name": "HD+",
+      "market_share": 10,
+      "common_sizes": ["15.6\"", "17\""],
+      "refresh_rate": [60],
+      "color_depth": 24
+    },
+    {
+      "resolution": "1600x900",
+      "width": 1600,
+      "height": 900,
+      "aspect_ratio": "16:9",
+      "name": "HD+",
+      "market_share": 5,
+      "common_sizes": ["20\"", "21.5\""],
+      "refresh_rate": [60],
+      "color_depth": 24
+    },
+    {
+      "resolution": "1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "aspect_ratio": "16:9",
+      "name": "Full HD",
+      "market_share": 40,
+      "common_sizes": ["21.5\"", "24\"", "27\""],
+      "refresh_rate": [60, 75, 120, 144, 165],
+      "color_depth": 24
+    },
+    {
+      "resolution": "1920x1200",
+      "width": 1920,
+      "height": 1200,
+      "aspect_ratio": "16:10",
+      "name": "WUXGA",
+      "market_share": 5,
+      "common_sizes": ["24\"", "27\""],
+      "refresh_rate": [60],
+      "color_depth": 24
+    },
+    {
+      "resolution": "2560x1080",
+      "width": 2560,
+      "height": 1080,
+      "aspect_ratio": "21:9",
+      "name": "UltraWide FHD",
+      "market_share": 3,
+      "common_sizes": ["29\"", "34\""],
+      "refresh_rate": [60, 75, 100],
+      "color_depth": 24
+    },
+    {
+      "resolution": "2560x1440",
+      "width": 2560,
+      "height": 1440,
+      "aspect_ratio": "16:9",
+      "name": "QHD",
+      "market_share": 7,
+      "common_sizes": ["27\"", "32\""],
+      "refresh_rate": [60, 75, 120, 144, 165, 240],
+      "color_depth": 24
+    },
+    {
+      "resolution": "2560x1600",
+      "width": 2560,
+      "height": 1600,
+      "aspect_ratio": "16:10",
+      "name": "WQXGA",
+      "market_share": 2,
+      "common_sizes": ["27\"", "30\""],
+      "refresh_rate": [60],
+      "color_depth": 24
+    },
+    {
+      "resolution": "3440x1440",
+      "width": 3440,
+      "height": 1440,
+      "aspect_ratio": "21:9",
+      "name": "UltraWide QHD",
+      "market_share": 2,
+      "common_sizes": ["34\"", "38\""],
+      "refresh_rate": [60, 100, 120, 144],
+      "color_depth": 24
+    },
+    {
+      "resolution": "3840x2160",
+      "width": 3840,
+      "height": 2160,
+      "aspect_ratio": "16:9",
+      "name": "4K UHD",
+      "market_share": 3,
+      "common_sizes": ["27\"", "32\"", "43\""],
+      "refresh_rate": [60, 120, 144],
+      "color_depth": 24
+    }
+  ],
+  
+  "pixel_ratios": {
+    "1.0": {"resolutions": ["1280x720", "1366x768", "1440x900", "1536x864", "1600x900", "1920x1080", "1920x1200"], "market_share": 85},
+    "1.25": {"resolutions": ["2560x1440", "2560x1600"], "market_share": 8},
+    "1.5": {"resolutions": ["2560x1440", "2560x1600"], "market_share": 4},
+    "2.0": {"resolutions": ["3840x2160"], "market_share": 3}
+  }
+}

@@ -1,0 +1,353 @@
+{
+  "database_name": "CPU Database",
+  "version": "1.0.0",
+  "last_updated": "2025-10-15",
+  "description": "Database of Intel and AMD CPUs with realistic specifications",
+  
+  "intel_cpus": [
+    {
+      "model": "Intel Core i3-10100",
+      "cores": 4,
+      "threads": 8,
+      "base_clock": "3.6 GHz",
+      "max_clock": "4.3 GHz",
+      "generation": "10th Gen",
+      "tdp": "65W",
+      "market_share": 5,
+      "release_year": 2020
+    },
+    {
+      "model": "Intel Core i3-12100",
+      "cores": 4,
+      "threads": 8,
+      "base_clock": "3.3 GHz",
+      "max_clock": "4.3 GHz",
+      "generation": "12th Gen",
+      "tdp": "60W",
+      "market_share": 8,
+      "release_year": 2022
+    },
+    {
+      "model": "Intel Core i5-9400",
+      "cores": 6,
+      "threads": 6,
+      "base_clock": "2.9 GHz",
+      "max_clock": "4.1 GHz",
+      "generation": "9th Gen",
+      "tdp": "65W",
+      "market_share": 6,
+      "release_year": 2019
+    },
+    {
+      "model": "Intel Core i5-10400",
+      "cores": 6,
+      "threads": 12,
+      "base_clock": "2.9 GHz",
+      "max_clock": "4.3 GHz",
+      "generation": "10th Gen",
+      "tdp": "65W",
+      "market_share": 12,
+      "release_year": 2020
+    },
+    {
+      "model": "Intel Core i5-11400",
+      "cores": 6,
+      "threads": 12,
+      "base_clock": "2.6 GHz",
+      "max_clock": "4.4 GHz",
+      "generation": "11th Gen",
+      "tdp": "65W",
+      "market_share": 10,
+      "release_year": 2021
+    },
+    {
+      "model": "Intel Core i5-12400",
+      "cores": 6,
+      "threads": 12,
+      "base_clock": "2.5 GHz",
+      "max_clock": "4.4 GHz",
+      "generation": "12th Gen",
+      "tdp": "65W",
+      "market_share": 15,
+      "release_year": 2022
+    },
+    {
+      "model": "Intel Core i5-13400",
+      "cores": 10,
+      "threads": 16,
+      "base_clock": "2.5 GHz",
+      "max_clock": "4.6 GHz",
+      "generation": "13th Gen",
+      "tdp": "65W",
+      "market_share": 12,
+      "release_year": 2023
+    },
+    {
+      "model": "Intel Core i7-9700",
+      "cores": 8,
+      "threads": 8,
+      "base_clock": "3.0 GHz",
+      "max_clock": "4.7 GHz",
+      "generation": "9th Gen",
+      "tdp": "65W",
+      "market_share": 5,
+      "release_year": 2019
+    },
+    {
+      "model": "Intel Core i7-10700",
+      "cores": 8,
+      "threads": 16,
+      "base_clock": "2.9 GHz",
+      "max_clock": "4.8 GHz",
+      "generation": "10th Gen",
+      "tdp": "65W",
+      "market_share": 10,
+      "release_year": 2020
+    },
+    {
+      "model": "Intel Core i7-11700",
+      "cores": 8,
+      "threads": 16,
+      "base_clock": "2.5 GHz",
+      "max_clock": "4.9 GHz",
+      "generation": "11th Gen",
+      "tdp": "65W",
+      "market_share": 8,
+      "release_year": 2021
+    },
+    {
+      "model": "Intel Core i7-12700",
+      "cores": 12,
+      "threads": 20,
+      "base_clock": "2.1 GHz",
+      "max_clock": "4.9 GHz",
+      "generation": "12th Gen",
+      "tdp": "65W",
+      "market_share": 12,
+      "release_year": 2022
+    },
+    {
+      "model": "Intel Core i7-13700",
+      "cores": 16,
+      "threads": 24,
+      "base_clock": "2.1 GHz",
+      "max_clock": "5.2 GHz",
+      "generation": "13th Gen",
+      "tdp": "65W",
+      "market_share": 10,
+      "release_year": 2023
+    },
+    {
+      "model": "Intel Core i9-10900",
+      "cores": 10,
+      "threads": 20,
+      "base_clock": "2.8 GHz",
+      "max_clock": "5.2 GHz",
+      "generation": "10th Gen",
+      "tdp": "65W",
+      "market_share": 4,
+      "release_year": 2020
+    },
+    {
+      "model": "Intel Core i9-11900",
+      "cores": 8,
+      "threads": 16,
+      "base_clock": "2.5 GHz",
+      "max_clock": "5.3 GHz",
+      "generation": "11th Gen",
+      "tdp": "65W",
+      "market_share": 3,
+      "release_year": 2021
+    },
+    {
+      "model": "Intel Core i9-12900",
+      "cores": 16,
+      "threads": 24,
+      "base_clock": "2.4 GHz",
+      "max_clock": "5.1 GHz",
+      "generation": "12th Gen",
+      "tdp": "65W",
+      "market_share": 5,
+      "release_year": 2022
+    },
+    {
+      "model": "Intel Core i9-13900",
+      "cores": 24,
+      "threads": 32,
+      "base_clock": "2.0 GHz",
+      "max_clock": "5.6 GHz",
+      "generation": "13th Gen",
+      "tdp": "65W",
+      "market_share": 4,
+      "release_year": 2023
+    }
+  ],
+  
+  "amd_cpus": [
+    {
+      "model": "AMD Ryzen 3 3100",
+      "cores": 4,
+      "threads": 8,
+      "base_clock": "3.6 GHz",
+      "max_clock": "3.9 GHz",
+      "generation": "Zen 2",
+      "tdp": "65W",
+      "market_share": 4,
+      "release_year": 2020
+    },
+    {
+      "model": "AMD Ryzen 3 4100",
+      "cores": 4,
+      "threads": 8,
+      "base_clock": "3.8 GHz",
+      "max_clock": "4.0 GHz",
+      "generation": "Zen 2",
+      "tdp": "65W",
+      "market_share": 5,
+      "release_year": 2022
+    },
+    {
+      "model": "AMD Ryzen 5 3600",
+      "cores": 6,
+      "threads": 12,
+      "base_clock": "3.6 GHz",
+      "max_clock": "4.2 GHz",
+      "generation": "Zen 2",
+      "tdp": "65W",
+      "market_share": 15,
+      "release_year": 2019
+    },
+    {
+      "model": "AMD Ryzen 5 5600",
+      "cores": 6,
+      "threads": 12,
+      "base_clock": "3.5 GHz",
+      "max_clock": "4.4 GHz",
+      "generation": "Zen 3",
+      "tdp": "65W",
+      "market_share": 18,
+      "release_year": 2022
+    },
+    {
+      "model": "AMD Ryzen 5 5600X",
+      "cores": 6,
+      "threads": 12,
+      "base_clock": "3.7 GHz",
+      "max_clock": "4.6 GHz",
+      "generation": "Zen 3",
+      "tdp": "65W",
+      "market_share": 12,
+      "release_year": 2020
+    },
+    {
+      "model": "AMD Ryzen 5 7600",
+      "cores": 6,
+      "threads": 12,
+      "base_clock": "3.8 GHz",
+      "max_clock": "5.1 GHz",
+      "generation": "Zen 4",
+      "tdp": "65W",
+      "market_share": 10,
+      "release_year": 2023
+    },
+    {
+      "model": "AMD Ryzen 7 3700X",
+      "cores": 8,
+      "threads": 16,
+      "base_clock": "3.6 GHz",
+      "max_clock": "4.4 GHz",
+      "generation": "Zen 2",
+      "tdp": "65W",
+      "market_share": 10,
+      "release_year": 2019
+    },
+    {
+      "model": "AMD Ryzen 7 5700X",
+      "cores": 8,
+      "threads": 16,
+      "base_clock": "3.4 GHz",
+      "max_clock": "4.6 GHz",
+      "generation": "Zen 3",
+      "tdp": "65W",
+      "market_share": 12,
+      "release_year": 2022
+    },
+    {
+      "model": "AMD Ryzen 7 5800X",
+      "cores": 8,
+      "threads": 16,
+      "base_clock": "3.8 GHz",
+      "max_clock": "4.7 GHz",
+      "generation": "Zen 3",
+      "tdp": "105W",
+      "market_share": 8,
+      "release_year": 2020
+    },
+    {
+      "model": "AMD Ryzen 7 7700",
+      "cores": 8,
+      "threads": 16,
+      "base_clock": "3.8 GHz",
+      "max_clock": "5.3 GHz",
+      "generation": "Zen 4",
+      "tdp": "65W",
+      "market_share": 9,
+      "release_year": 2023
+    },
+    {
+      "model": "AMD Ryzen 9 3900X",
+      "cores": 12,
+      "threads": 24,
+      "base_clock": "3.8 GHz",
+      "max_clock": "4.6 GHz",
+      "generation": "Zen 2",
+      "tdp": "105W",
+      "market_share": 5,
+      "release_year": 2019
+    },
+    {
+      "model": "AMD Ryzen 9 5900X",
+      "cores": 12,
+      "threads": 24,
+      "base_clock": "3.7 GHz",
+      "max_clock": "4.8 GHz",
+      "generation": "Zen 3",
+      "tdp": "105W",
+      "market_share": 6,
+      "release_year": 2020
+    },
+    {
+      "model": "AMD Ryzen 9 7900",
+      "cores": 12,
+      "threads": 24,
+      "base_clock": "3.7 GHz",
+      "max_clock": "5.4 GHz",
+      "generation": "Zen 4",
+      "tdp": "65W",
+      "market_share": 5,
+      "release_year": 2023
+    },
+    {
+      "model": "AMD Ryzen 9 5950X",
+      "cores": 16,
+      "threads": 32,
+      "base_clock": "3.4 GHz",
+      "max_clock": "4.9 GHz",
+      "generation": "Zen 3",
+      "tdp": "105W",
+      "market_share": 3,
+      "release_year": 2020
+    },
+    {
+      "model": "AMD Ryzen 9 7950X",
+      "cores": 16,
+      "threads": 32,
+      "base_clock": "4.5 GHz",
+      "max_clock": "5.7 GHz",
+      "generation": "Zen 4",
+      "tdp": "170W",
+      "market_share": 3,
+      "release_year": 2022
+    }
+  ]
+}

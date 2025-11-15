@@ -1,0 +1,75 @@
+{
+  "database_name": "Network Adapter Database",
+  "version": "1.0.0",
+  "last_updated": "2025-10-15",
+  "description": "Common network adapters (Ethernet & WiFi)",
+  
+  "ethernet_adapters": [
+    {
+      "name": "Realtek PCIe GbE Family Controller",
+      "chipset": "RTL8111H",
+      "speed": "1000 Mbps",
+      "market_share": 30,
+      "manufacturer": "Realtek"
+    },
+    {
+      "name": "Realtek PCIe 2.5GbE Family Controller",
+      "chipset": "RTL8125B",
+      "speed": "2500 Mbps",
+      "market_share": 15,
+      "manufacturer": "Realtek"
+    },
+    {
+      "name": "Intel Ethernet Connection",
+      "chipset": "I219-V",
+      "speed": "1000 Mbps",
+      "market_share": 20,
+      "manufacturer": "Intel"
+    },
+    {
+      "name": "Intel Ethernet Controller",
+      "chipset": "I225-V",
+      "speed": "2500 Mbps",
+      "market_share": 10,
+      "manufacturer": "Intel"
+    }
+  ],
+  
+  "wifi_adapters": [
+    {
+      "name": "Intel Wi-Fi 6 AX200",
+      "standard": "802.11ax",
+      "speed": "2400 Mbps",
+      "market_share": 15,
+      "manufacturer": "Intel"
+    },
+    {
+      "name": "Intel Wi-Fi 6E AX210",
+      "standard": "802.11ax",
+      "speed": "2400 Mbps",
+      "market_share": 10,
+      "manufacturer": "Intel"
+    },
+    {
+      "name": "Realtek RTL8822CE",
+      "standard": "802.11ac",
+      "speed": "867 Mbps",
+      "market_share": 12,
+      "manufacturer": "Realtek"
+    },
+    {
+      "name": "Qualcomm Atheros QCA9377",
+      "standard": "802.11ac",
+      "speed": "433 Mbps",
+      "market_share": 8,
+      "manufacturer": "Qualcomm"
+    },
+    {
+      "name": "MediaTek MT7921",
+      "standard": "802.11ax",
+      "speed": "2400 Mbps",
+      "market_share": 8,
+      "manufacturer": "MediaTek"
+    }
+  ]
+}

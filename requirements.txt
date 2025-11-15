@@ -1,0 +1,21 @@
+PyQt5==5.15.10
+requests==2.31.0
+python-decouple==3.8
+google-genai
+
+# Selenium dependencies cho xử lý audio local
+selenium==4.15.2
+webdriver-manager==4.0.1
+pyperclip==1.8.2
+undetected-chromedriver>=3.5.0
+pydub
+ffmpeg
+psutil  # For Chrome process cleanup
+
+# Runware API for image generation
+runware
+aiohttp  # For async HTTP requests
+
+# MoviePy for video generation
+moviepy
+imageio-ffmpeg  # FFmpeg wrapper for MoviePy

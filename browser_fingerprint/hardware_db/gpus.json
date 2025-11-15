@@ -1,0 +1,330 @@
+{
+  "database_name": "GPU Database",
+  "version": "1.0.0",
+  "last_updated": "2025-10-15",
+  "description": "Database of NVIDIA, AMD, and Intel GPUs with WebGL renderer strings",
+  
+  "nvidia_gpus": [
+    {
+      "model": "NVIDIA GeForce GTX 1050",
+      "vram": "2GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce GTX 1050 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 5,
+      "release_year": 2016,
+      "performance_tier": "entry"
+    },
+    {
+      "model": "NVIDIA GeForce GTX 1050 Ti",
+      "vram": "4GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce GTX 1050 Ti Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 8,
+      "release_year": 2016,
+      "performance_tier": "entry"
+    },
+    {
+      "model": "NVIDIA GeForce GTX 1060",
+      "vram": "6GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce GTX 1060 6GB Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 12,
+      "release_year": 2016,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "NVIDIA GeForce GTX 1650",
+      "vram": "4GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce GTX 1650 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 15,
+      "release_year": 2019,
+      "performance_tier": "entry"
+    },
+    {
+      "model": "NVIDIA GeForce GTX 1660",
+      "vram": "6GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce GTX 1660 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 10,
+      "release_year": 2019,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "NVIDIA GeForce GTX 1660 Ti",
+      "vram": "6GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce GTX 1660 Ti Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 12,
+      "release_year": 2019,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "NVIDIA GeForce RTX 2060",
+      "vram": "6GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce RTX 2060 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 10,
+      "release_year": 2019,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "NVIDIA GeForce RTX 2070",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce RTX 2070 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 6,
+      "release_year": 2018,
+      "performance_tier": "high"
+    },
+    {
+      "model": "NVIDIA GeForce RTX 3050",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce RTX 3050 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 10,
+      "release_year": 2022,
+      "performance_tier": "entry"
+    },
+    {
+      "model": "NVIDIA GeForce RTX 3060",
+      "vram": "12GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 18,
+      "release_year": 2021,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "NVIDIA GeForce RTX 3060 Ti",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce RTX 3060 Ti Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 12,
+      "release_year": 2020,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "NVIDIA GeForce RTX 3070",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 10,
+      "release_year": 2020,
+      "performance_tier": "high"
+    },
+    {
+      "model": "NVIDIA GeForce RTX 3080",
+      "vram": "10GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce RTX 3080 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 5,
+      "release_year": 2020,
+      "performance_tier": "enthusiast"
+    },
+    {
+      "model": "NVIDIA GeForce RTX 4060",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce RTX 4060 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 8,
+      "release_year": 2023,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "NVIDIA GeForce RTX 4070",
+      "vram": "12GB",
+      "webgl_vendor": "Google Inc. (NVIDIA)",
+      "webgl_renderer": "ANGLE (NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 6,
+      "release_year": 2023,
+      "performance_tier": "high"
+    }
+  ],
+  
+  "amd_gpus": [
+    {
+      "model": "AMD Radeon RX 560",
+      "vram": "4GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 560 Series Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 4,
+      "release_year": 2017,
+      "performance_tier": "entry"
+    },
+    {
+      "model": "AMD Radeon RX 570",
+      "vram": "4GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 570 Series Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 6,
+      "release_year": 2017,
+      "performance_tier": "entry"
+    },
+    {
+      "model": "AMD Radeon RX 580",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 580 Series Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 10,
+      "release_year": 2017,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "AMD Radeon RX 5500 XT",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 5500 XT Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 5,
+      "release_year": 2019,
+      "performance_tier": "entry"
+    },
+    {
+      "model": "AMD Radeon RX 5600 XT",
+      "vram": "6GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 5600 XT Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 6,
+      "release_year": 2020,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "AMD Radeon RX 5700 XT",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 5700 XT Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 7,
+      "release_year": 2019,
+      "performance_tier": "high"
+    },
+    {
+      "model": "AMD Radeon RX 6600",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 6600 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 8,
+      "release_year": 2021,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "AMD Radeon RX 6600 XT",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 6600 XT Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 9,
+      "release_year": 2021,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "AMD Radeon RX 6700 XT",
+      "vram": "12GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 6700 XT Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 6,
+      "release_year": 2021,
+      "performance_tier": "high"
+    },
+    {
+      "model": "AMD Radeon RX 6800",
+      "vram": "16GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 6800 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 4,
+      "release_year": 2020,
+      "performance_tier": "enthusiast"
+    },
+    {
+      "model": "AMD Radeon RX 7600",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 7600 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 7,
+      "release_year": 2023,
+      "performance_tier": "mid"
+    },
+    {
+      "model": "AMD Radeon RX 7700 XT",
+      "vram": "12GB",
+      "webgl_vendor": "Google Inc. (AMD)",
+      "webgl_renderer": "ANGLE (AMD Radeon RX 7700 XT Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 5,
+      "release_year": 2023,
+      "performance_tier": "high"
+    }
+  ],
+  
+  "intel_gpus": [
+    {
+      "model": "Intel UHD Graphics 620",
+      "vram": "shared",
+      "webgl_vendor": "Google Inc. (Intel)",
+      "webgl_renderer": "ANGLE (Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 15,
+      "release_year": 2017,
+      "performance_tier": "integrated"
+    },
+    {
+      "model": "Intel UHD Graphics 630",
+      "vram": "shared",
+      "webgl_vendor": "Google Inc. (Intel)",
+      "webgl_renderer": "ANGLE (Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 18,
+      "release_year": 2017,
+      "performance_tier": "integrated"
+    },
+    {
+      "model": "Intel HD Graphics 530",
+      "vram": "shared",
+      "webgl_vendor": "Google Inc. (Intel)",
+      "webgl_renderer": "ANGLE (Intel(R) HD Graphics 530 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 10,
+      "release_year": 2015,
+      "performance_tier": "integrated"
+    },
+    {
+      "model": "Intel Iris Xe Graphics",
+      "vram": "shared",
+      "webgl_vendor": "Google Inc. (Intel)",
+      "webgl_renderer": "ANGLE (Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 12,
+      "release_year": 2020,
+      "performance_tier": "integrated"
+    },
+    {
+      "model": "Intel UHD Graphics 730",
+      "vram": "shared",
+      "webgl_vendor": "Google Inc. (Intel)",
+      "webgl_renderer": "ANGLE (Intel(R) UHD Graphics 730 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 10,
+      "release_year": 2022,
+      "performance_tier": "integrated"
+    },
+    {
+      "model": "Intel UHD Graphics 770",
+      "vram": "shared",
+      "webgl_vendor": "Google Inc. (Intel)",
+      "webgl_renderer": "ANGLE (Intel(R) UHD Graphics 770 Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 8,
+      "release_year": 2022,
+      "performance_tier": "integrated"
+    },
+    {
+      "model": "Intel Arc A380",
+      "vram": "6GB",
+      "webgl_vendor": "Google Inc. (Intel)",
+      "webgl_renderer": "ANGLE (Intel(R) Arc(TM) A380 Graphics Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 2,
+      "release_year": 2022,
+      "performance_tier": "entry"
+    },
+    {
+      "model": "Intel Arc A750",
+      "vram": "8GB",
+      "webgl_vendor": "Google Inc. (Intel)",
+      "webgl_renderer": "ANGLE (Intel(R) Arc(TM) A750 Graphics Direct3D11 vs_5_0 ps_5_0)",
+      "market_share": 3,
+      "release_year": 2022,
+      "performance_tier": "mid"
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "database_name": "Language Database",
+  "version": "1.0.0",
+  "last_updated": "2025-10-15",
+  "description": "Common language configurations by region",
+  
+  "language_packs": {
+    "Asia/Ho_Chi_Minh": {
+      "primary": [
+        "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+        "vi,en-US;q=0.9,en;q=0.8",
+        "vi-VN,vi;q=0.9,en;q=0.8"
+      ],
+      "country_code": "VN",
+      "currency": "VND"
+    },
+    "Asia/Bangkok": {
+      "primary": [
+        "th-TH,th;q=0.9,en-US;q=0.8,en;q=0.7",
+        "th,en-US;q=0.9,en;q=0.8",
+        "th-TH,th;q=0.9,en;q=0.8"
+      ],
+      "country_code": "TH",
+      "currency": "THB"
+    },
+    "Asia/Singapore": {
+      "primary": [
+        "en-SG,en;q=0.9,zh-CN;q=0.8",
+        "en,zh;q=0.9",
+        "en-SG,en;q=0.9,ms;q=0.8,ta;q=0.7"
+      ],
+      "country_code": "SG",
+      "currency": "SGD"
+    },
+    "Asia/Manila": {
+      "primary": [
+        "en-PH,en;q=0.9,fil;q=0.8",
+        "en,fil;q=0.9",
+        "fil-PH,fil;q=0.9,en-US;q=0.8,en;q=0.7"
+      ],
+      "country_code": "PH",
+      "currency": "PHP"
+    },
+    "Asia/Jakarta": {
+      "primary": [
+        "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        "id,en;q=0.9",
+        "id-ID,id;q=0.9,en;q=0.8"
+      ],
+      "country_code": "ID",
+      "currency": "IDR"
+    },
+    "Asia/Kuala_Lumpur": {
+      "primary": [
+        "ms-MY,ms;q=0.9,en-US;q=0.8,en;q=0.7",
+        "en,ms;q=0.9,zh;q=0.8",
+        "ms-MY,ms;q=0.9,en;q=0.8"
+      ],
+      "country_code": "MY",
+      "currency": "MYR"
+    },
+    "Asia/Tokyo": {
+      "primary": [
+        "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7",
+        "ja,en;q=0.9",
+        "ja-JP,ja;q=0.9,en;q=0.8"
+      ],
+      "country_code": "JP",
+      "currency": "JPY"
+    },
+    "Asia/Seoul": {
+      "primary": [
+        "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "ko,en;q=0.9",
+        "ko-KR,ko;q=0.9,en;q=0.8"
+      ],
+      "country_code": "KR",
+      "currency": "KRW"
+    },
+    "Asia/Hong_Kong": {
+      "primary": [
+        "zh-HK,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+        "zh,en;q=0.9",
+        "zh-HK,zh;q=0.9,yue;q=0.8,en;q=0.7"
+      ],
+      "country_code": "HK",
+      "currency": "HKD"
+    },
+    "Asia/Taipei": {
+      "primary": [
+        "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+        "zh,en;q=0.9",
+        "zh-TW,zh;q=0.9,en;q=0.8"
+      ],
+      "country_code": "TW",
+      "currency": "TWD"
+    },
+    "America/New_York": {
+      "primary": [
+        "en-US,en;q=0.9",
+        "en-US,en;q=0.9,es;q=0.8",
+        "en"
+      ],
+      "country_code": "US",
+      "currency": "USD"
+    },
+    "America/Los_Angeles": {
+      "primary": [
+        "en-US,en;q=0.9",
+        "en-US,en;q=0.9,es;q=0.8",
+        "en"
+      ],
+      "country_code": "US",
+      "currency": "USD"
+    },
+    "Europe/London": {
+      "primary": [
+        "en-GB,en;q=0.9",
+        "en-GB,en;q=0.9,en-US;q=0.8",
+        "en"
+      ],
+      "country_code": "GB",
+      "currency": "GBP"
+    },
+    "Europe/Paris": {
+      "primary": [
+        "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "fr,en;q=0.9",
+        "fr-FR,fr;q=0.9,en;q=0.8"
+      ],
+      "country_code": "FR",
+      "currency": "EUR"
+    },
+    "Europe/Berlin": {
+      "primary": [
+        "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+        "de,en;q=0.9",
+        "de-DE,de;q=0.9,en;q=0.8"
+      ],
+      "country_code": "DE",
+      "currency": "EUR"
+    }
+  }
+}

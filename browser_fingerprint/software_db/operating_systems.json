@@ -1,0 +1,157 @@
+{
+  "database_name": "Operating System Database",
+  "version": "1.0.0",
+  "last_updated": "2025-10-15",
+  "description": "Common operating systems with versions and build numbers",
+  
+  "windows": [
+    {
+      "name": "Windows 10",
+      "version": "10.0",
+      "build": "19041",
+      "release": "2004 (May 2020)",
+      "platform": "Win32",
+      "market_share": 35,
+      "user_agent_version": "10.0"
+    },
+    {
+      "name": "Windows 10",
+      "version": "10.0",
+      "build": "19042",
+      "release": "20H2 (October 2020)",
+      "platform": "Win32",
+      "market_share": 20,
+      "user_agent_version": "10.0"
+    },
+    {
+      "name": "Windows 10",
+      "version": "10.0",
+      "build": "19044",
+      "release": "21H2 (November 2021)",
+      "platform": "Win32",
+      "market_share": 15,
+      "user_agent_version": "10.0"
+    },
+    {
+      "name": "Windows 11",
+      "version": "10.0",
+      "build": "22000",
+      "release": "21H2 (October 2021)",
+      "platform": "Win32",
+      "market_share": 12,
+      "user_agent_version": "10.0"
+    },
+    {
+      "name": "Windows 11",
+      "version": "10.0",
+      "build": "22621",
+      "release": "22H2 (September 2022)",
+      "platform": "Win32",
+      "market_share": 10,
+      "user_agent_version": "10.0"
+    },
+    {
+      "name": "Windows 11",
+      "version": "10.0",
+      "build": "22631",
+      "release": "23H2 (October 2023)",
+      "platform": "Win32",
+      "market_share": 8,
+      "user_agent_version": "10.0"
+    }
+  ],
+  
+  "macos": [
+    {
+      "name": "macOS Catalina",
+      "version": "10.15",
+      "build": "19H2",
+      "platform": "MacIntel",
+      "market_share": 5,
+      "user_agent_version": "10_15_7"
+    },
+    {
+      "name": "macOS Big Sur",
+      "version": "11.0",
+      "build": "20A5384c",
+      "platform": "MacIntel",
+      "market_share": 10,
+      "user_agent_version": "11_0_0"
+    },
+    {
+      "name": "macOS Monterey",
+      "version": "12.0",
+      "build": "21A559",
+      "platform": "MacIntel",
+      "market_share": 15,
+      "user_agent_version": "12_0_0"
+    },
+    {
+      "name": "macOS Ventura",
+      "version": "13.0",
+      "build": "22A380",
+      "platform": "MacIntel",
+      "market_share": 20,
+      "user_agent_version": "13_0_0"
+    },
+    {
+      "name": "macOS Sonoma",
+      "version": "14.0",
+      "build": "23A344",
+      "platform": "MacIntel",
+      "market_share": 15,
+      "user_agent_version": "14_0_0"
+    }
+  ],
+  
+  "linux": [
+    {
+      "name": "Ubuntu 20.04 LTS",
+      "version": "20.04",
+      "kernel": "5.15",
+      "platform": "Linux x86_64",
+      "market_share": 20,
+      "user_agent_version": "Ubuntu 20.04"
+    },
+    {
+      "name": "Ubuntu 22.04 LTS",
+      "version": "22.04",
+      "kernel": "5.19",
+      "platform": "Linux x86_64",
+      "market_share": 30,
+      "user_agent_version": "Ubuntu 22.04"
+    },
+    {
+      "name": "Ubuntu 24.04 LTS",
+      "version": "24.04",
+      "kernel": "6.8",
+      "platform": "Linux x86_64",
+      "market_share": 15,
+      "user_agent_version": "Ubuntu 24.04"
+    },
+    {
+      "name": "Debian 11",
+      "version": "11",
+      "kernel": "5.10",
+      "platform": "Linux x86_64",
+      "market_share": 10,
+      "user_agent_version": "Debian 11"
+    },
+    {
+      "name": "Fedora 38",
+      "version": "38",
+      "kernel": "6.2",
+      "platform": "Linux x86_64",
+      "market_share": 8,
+      "user_agent_version": "Fedora 38"
+    },
+    {
+      "name": "Arch Linux",
+      "version": "rolling",
+      "kernel": "6.6",
+      "platform": "Linux x86_64",
+      "market_share": 5,
+      "user_agent_version": "Arch Linux"
+    }
+  ]
+}
