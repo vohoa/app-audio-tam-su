@@ -760,7 +760,7 @@ class SeleniumAudioGenerator:
                     if word_count <= MAX_CHUNK_SIZE:
                         logger.info("✅ Content fits in single chunk, generating directly...")
                         narrator_prompt = (
-                            "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ.\n"
+                            "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người lớn. Giọng ấm áp, thấu hiểu như người bạn đang chia sẻ những tâm tư, câu chuyện đời thường trong đêm khuya.\n"
                             f"Speaker 1: {full_content}"
                         )
 
@@ -784,7 +784,7 @@ class SeleniumAudioGenerator:
                             logger.info(f"🎯 Generating chunk {idx}/{len(chunks)} ({chunk_word_count} words)...")
 
                             chunk_prompt = (
-                                "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ.\n"
+                                "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người lớn. Giọng ấm áp, thấu hiểu như người bạn đang chia sẻ những tâm tư, câu chuyện đời thường trong đêm khuya.\n"
                                 f"Speaker 1: {chunk_text}"
                             )
 
