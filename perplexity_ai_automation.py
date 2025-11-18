@@ -1354,9 +1354,9 @@ class PerplexityAIAutomation:
             True nếu thành công
         """
         try:
-            url = getattr(config, "PERPLEXITY_PROMPT_JSON_URL", None)
+            url = getattr(config, "PERPLEXITY_CREATE_PROMPT_IMAGES", None)
             if not url:
-                logger.warning("PERPLEXITY_PROMPT_JSON_URL not set")
+                logger.warning("PERPLEXITY_CREATE_PROMPT_IMAGES not set")
                 return True  # Not critical
             
             logger.info(f"Opening image prompt page: {url}")
@@ -1496,7 +1496,7 @@ class PerplexityAIAutomation:
                 logger.info("✓ Login verified")
             
             # Go to image prompt page if configured
-            if hasattr(config, 'PERPLEXITY_PROMPT_JSON_URL') and config.PERPLEXITY_PROMPT_JSON_URL:
+            if hasattr(config, 'PERPLEXITY_CREATE_PROMPT_IMAGES') and config.PERPLEXITY_CREATE_PROMPT_IMAGES:
                 self.goto_prompt_json_page()
             
             # Send prompt

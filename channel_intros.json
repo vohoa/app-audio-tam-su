@@ -27,6 +27,10 @@
     {
       "name": "Chỉ Tên Chương",
       "content": "Xin chào những tâm hồn đang tìm kiếm sự đồng điệu. Tối nay, xin được kể cho bạn nghe: {chapter_title}\n\n"
+    },
+    {
+      "name": "Không Lời Mở Đầu",
+      "content": ""
     }
   ]
 }
