@@ -455,79 +455,9 @@ class ImagePromptGenerationWorker(QThread):
             from config import get_conversations_dir, get_perplexity_ai_profile
             import config
 
-            # NEW: Get content from conversation file if available, otherwise use chapter_content
+            # Use chapter_content directly for image prompt generation
             content_to_use = self.chapter_content
-            safe_story_name = convert_to_slug(self.story_name) if self.story_name else f"story_{self.story_id}"
-            conversation_dir = os.path.join(
-                config.AUDIO_DOWNLOAD_PATH,
-                safe_story_name,
-                'conversations'
-            )
-            conversation_filename = f"{self.story_id}_{self.chapter_number or 0}.json"
-            conversation_path = os.path.join(conversation_dir, conversation_filename)
-
-            # Check if conversation file exists
-            if os.path.exists(conversation_path):
-                self.progress.emit(f'📄 Tìm thấy file conversation: {conversation_filename}')
-                try:
-                    with open(conversation_path, 'r', encoding='utf-8') as f:
-                        conversation_data = json.load(f)
-
-                    # Send full JSON content instead of extracting text
-                    if 'speakers' in conversation_data:
-                        # Convert JSON to formatted string for sending
-                        content_to_use = json.dumps(conversation_data, ensure_ascii=False, indent=2)
-                        self.progress.emit('✓ Sử dụng toàn bộ nội dung JSON từ file conversation')
-                    else:
-                        self.progress.emit('⚠️ File conversation không đúng format, dùng nội dung chapter')
-                except Exception as e:
-                    logger.warning(f"Không thể đọc conversation file: {e}")
-                    self.progress.emit('⚠️ Lỗi đọc conversation, dùng nội dung chapter')
-            else:
-                # Try to create conversation file first
-                self.progress.emit('📝 Chưa có file conversation, đang tạo...')
-                try:
-                    os.makedirs(conversation_dir, exist_ok=True)
-
-                    temp_generator = PerplexityConversationGenerator(
-                        conversation_dir=conversation_dir,
-                        headless=False,
-                        profile_name=get_perplexity_ai_profile()
-                    )
-
-                    if self.should_stop:
-                        self.finished.emit(False, 'Đã dừng', None)
-                        return
-
-                    self.progress.emit('🔮 Đang tạo conversation với Perplexity AI...')
-
-                    result = temp_generator.create_conversation_full_workflow(
-                        chapter_content=self.chapter_content,
-                        story_name=self.story_name,
-                        story_id=self.story_id,
-                        chapter_number=self.chapter_number,
-                        save_to_file=True,
-                        filename=conversation_filename
-                    )
-
-                    temp_generator.close()
-
-                    if result and result.get('filepath') and os.path.exists(conversation_path):
-                        self.progress.emit('✓ Đã tạo file conversation thành công')
-                        # Load the newly created conversation
-                        with open(conversation_path, 'r', encoding='utf-8') as f:
-                            conversation_data = json.load(f)
-
-                        if 'speakers' in conversation_data:
-                            # Send full JSON content instead of extracting text
-                            content_to_use = json.dumps(conversation_data, ensure_ascii=False, indent=2)
-                            self.progress.emit('✓ Sử dụng toàn bộ nội dung JSON từ file conversation mới tạo')
-                    else:
-                        self.progress.emit('⚠️ Không tạo được conversation, dùng nội dung chapter')
-
-                except Exception as e:
-                    logger.warning(f"Không thể tạo conversation file: {e}")
-                    self.progress.emit('⚠️ Lỗi tạo conversation, dùng nội dung chapter')
+            self.progress.emit('✓ Sử dụng nội dung chapter để tạo image prompts')
 
             # Create generator
             self.generator = PerplexityConversationGenerator(
@@ -542,7 +472,7 @@ class ImagePromptGenerationWorker(QThread):
 
             # Send content to generate image prompts
             self.progress.emit('🎨 Đang gửi nội dung để tạo image prompts...')
-            self.progress.emit('(Sử dụng nội dung từ conversation)')
+            self.progress.emit('(Sử dụng nội dung chapter)')
 
             if self.should_stop:
                 self.finished.emit(False, 'Đã dừng', None)
@@ -638,80 +568,9 @@ class RunwareImageGenerationWorker(QThread):
             logger.info(f"Expected image prompts path: {json_path}")
             logger.info(f"File exists initially: {os.path.exists(json_path)}")
 
-            # NEW: Get content from conversation file if available, otherwise use chapter_content
+            # Use chapter_content directly for image prompt generation
             content_to_use = self.chapter_content
-            conversation_dir = os.path.join(
-                config.AUDIO_DOWNLOAD_PATH,
-                safe_story_name,
-                'conversations'
-            )
-            conversation_filename = f"{self.story_id}_{self.chapter_number or 0}.json"
-            conversation_path = os.path.join(conversation_dir, conversation_filename)
-
-            # Check if conversation file exists
-            if os.path.exists(conversation_path):
-                self.progress.emit(f'📄 Tìm thấy file conversation: {conversation_filename}')
-                try:
-                    with open(conversation_path, 'r', encoding='utf-8') as f:
-                        conversation_data = json.load(f)
-
-                    # Send full JSON content instead of extracting text
-                    if 'speakers' in conversation_data:
-                        # Convert JSON to formatted string for sending
-                        content_to_use = json.dumps(conversation_data, ensure_ascii=False, indent=2)
-                        self.progress.emit('✓ Sử dụng toàn bộ nội dung JSON từ file conversation')
-                    else:
-                        self.progress.emit('⚠️ File conversation không đúng format, dùng nội dung chapter')
-                except Exception as e:
-                    logger.warning(f"Không thể đọc conversation file: {e}")
-                    self.progress.emit('⚠️ Lỗi đọc conversation, dùng nội dung chapter')
-            else:
-                # Try to create conversation file first
-                self.progress.emit('📝 Chưa có file conversation, đang tạo...')
-                try:
-                    from perplexity_conversation_generator import PerplexityConversationGenerator
-
-                    os.makedirs(conversation_dir, exist_ok=True)
-
-                    conv_generator = PerplexityConversationGenerator(
-                        conversation_dir=conversation_dir,
-                        headless=False,
-                        profile_name=config.PERPLEXITY_AI_PROFILE
-                    )
-
-                    if self.should_stop:
-                        self.finished.emit(False, 'Đã dừng', None)
-                        return
-
-                    self.progress.emit('🔮 Đang tạo conversation với Perplexity AI...')
-
-                    result = conv_generator.create_conversation_full_workflow(
-                        chapter_content=self.chapter_content,
-                        story_name=self.story_name,
-                        story_id=self.story_id,
-                        chapter_number=self.chapter_number,
-                        save_to_file=True,
-                        filename=conversation_filename
-                    )
-
-                    conv_generator.close()
-
-                    if result and result.get('filepath') and os.path.exists(conversation_path):
-                        self.progress.emit('✓ Đã tạo file conversation thành công')
-                        # Load the newly created conversation
-                        with open(conversation_path, 'r', encoding='utf-8') as f:
-                            conversation_data = json.load(f)
-
-                        if 'speakers' in conversation_data:
-                            # Send full JSON content instead of extracting text
-                            content_to_use = json.dumps(conversation_data, ensure_ascii=False, indent=2)
-                            self.progress.emit('✓ Sử dụng toàn bộ nội dung JSON từ file conversation mới tạo')
-                    else:
-                        self.progress.emit('⚠️ Không tạo được conversation, dùng nội dung chapter')
-
-                except Exception as e:
-                    logger.warning(f"Không thể tạo conversation file: {e}")
-                    self.progress.emit('⚠️ Lỗi tạo conversation, dùng nội dung chapter')
+            self.progress.emit('✓ Sử dụng nội dung chapter để tạo image prompts')
 
             # If JSON doesn't exist, generate it first
             if not os.path.exists(json_path):
@@ -730,7 +589,7 @@ class RunwareImageGenerationWorker(QThread):
                         return
 
                     self.progress.emit('🔮 Đang tạo image prompts với Perplexity AI...')
-                    self.progress.emit('(Sử dụng nội dung từ conversation)')
+                    self.progress.emit('(Sử dụng nội dung chapter)')
                     logger.info(f"Generating image prompts via Perplexity for story {self.story_id}, chapter {self.chapter_number}")
 
                     result = perplexity.generate_image_prompts(
