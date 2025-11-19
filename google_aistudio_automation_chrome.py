@@ -571,7 +571,7 @@ class GoogleAIStudioAutomation:
             driver = uc.Chrome(
                 options=uc_options,
                 driver_executable_path=self.chromedriver_path,
-                version_main=141,  # Chỉ định version Chrome để tải đúng ChromeDriver
+                version_main=142,  # Chỉ định version Chrome để tải đúng ChromeDriver
                 use_subprocess=True,  # Better process management
             )
             
@@ -831,7 +831,7 @@ class GoogleAIStudioAutomation:
                     options=options,
                     headless=self.headless,
                     use_subprocess=False,  # Tăng stability
-                    version_main=141,  # Chỉ định version Chrome để tải đúng ChromeDriver
+                    version_main=142,  # Chỉ định version Chrome để tải đúng ChromeDriver
                     browser_executable_path=self.chrome_binary_path,
                 )
                 
