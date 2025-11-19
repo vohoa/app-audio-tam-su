@@ -2692,21 +2692,48 @@ class GoogleAIStudioAutomation:
                 logger.info(f"📏 No text length provided → Default timeout: {max_wait_minutes}m")
             
             logger.info("Đang đợi quá trình tạo audio...")
-            
+
             start_time = time.time()
             last_log_time = start_time
             check_interval = 3  # Kiểm tra mỗi 3 giây
             consecutive_no_loading = 0  # Đếm số lần liên tiếp không thấy loading
-            
+
+            # ⭐ Progressive verification: Theo dõi duration tăng dần
+            last_duration = 0
+            duration_stable_count = 0  # Đếm số lần duration không đổi
+
             while time.time() - start_time < adaptive_timeout:
                 elapsed = time.time() - start_time
-                
+
                 # Log progress theo % và thời gian thực
                 if elapsed - (last_log_time - start_time) >= 15:  # Log mỗi 15 giây
                     progress_percent = min(95, (elapsed / adaptive_timeout) * 100)
                     logger.info(f"🔄 Audio generation progress: {progress_percent:.1f}% ({int(elapsed/60)}m {int(elapsed%60)}s / ~{int(adaptive_timeout/60)}m)")
                     last_log_time = time.time()
-                
+
+                # ⭐ Progressive check: Kiểm tra duration đang tăng dần
+                current_duration = self._get_audio_duration()
+                if current_duration and current_duration > 0:
+                    if current_duration > last_duration:
+                        logger.debug(f"📈 Audio duration đang tăng: {last_duration:.1f}s → {current_duration:.1f}s")
+                        last_duration = current_duration
+                        duration_stable_count = 0  # Reset counter
+                    elif current_duration == last_duration and last_duration > 0:
+                        duration_stable_count += 1
+                        logger.debug(f"⏸️ Audio duration ổn định ở {current_duration:.1f}s ({duration_stable_count}/5)")
+
+                        # Nếu duration không đổi trong 5 lần liên tiếp (15 giây)
+                        # có thể audio đã hoàn thành
+                        if duration_stable_count >= 5:
+                            logger.info(f"📊 Audio duration đã ổn định ở {current_duration:.1f}s, kiểm tra final...")
+                            # Double check với _check_audio_ready()
+                            time.sleep(2)
+                            if self._check_audio_ready():
+                                logger.info(f"✅ Audio đã hoàn thành với duration = {current_duration:.1f}s!")
+                                return True
+                            # Nếu chưa ready, reset counter và tiếp tục
+                            duration_stable_count = 0
+
                 # Kiểm tra audio element đã hoàn thành
                 audio_ready = self._check_audio_ready()
                 if audio_ready:
@@ -2783,7 +2810,7 @@ class GoogleAIStudioAutomation:
             "div[class*='footer-actions'] audio",
             "div[class*='speech-prompt'] audio"
         ]
-        
+
         for selector in audio_selectors:
             try:
                 elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
@@ -2793,38 +2820,106 @@ class GoogleAIStudioAutomation:
                         if src and src.strip() and src != "":
                             # ⭐ CRITICAL: Verify audio duration to ensure it's fully generated
                             try:
-                                # Get audio duration using JavaScript
-                                duration = self.driver.execute_script(
-                                    "return arguments[0].duration;", element
-                                )
-                                
+                                # Get audio metadata using JavaScript
+                                audio_info = self.driver.execute_script("""
+                                    const audio = arguments[0];
+                                    return {
+                                        duration: audio.duration,
+                                        readyState: audio.readyState,
+                                        buffered: audio.buffered.length > 0 ? {
+                                            start: audio.buffered.start(0),
+                                            end: audio.buffered.end(audio.buffered.length - 1)
+                                        } : null,
+                                        currentTime: audio.currentTime,
+                                        networkState: audio.networkState
+                                    };
+                                """, element)
+
+                                duration = audio_info.get('duration')
+                                ready_state = audio_info.get('readyState')
+                                buffered = audio_info.get('buffered')
+                                network_state = audio_info.get('networkState')
+
                                 # Check if duration is valid (not NaN, not 0, not Infinity)
                                 if duration and duration > 0 and duration != float('inf'):
-                                    logger.debug(f"✅ Audio found with duration: {duration:.2f}s")
-                                    
-                                    # ⭐ Extra verification: Check if audio is playable
-                                    ready_state = self.driver.execute_script(
-                                        "return arguments[0].readyState;", element
-                                    )
-                                    # readyState 4 = HAVE_ENOUGH_DATA (fully loaded)
-                                    if ready_state >= 3:  # 3 = HAVE_FUTURE_DATA, 4 = HAVE_ENOUGH_DATA
-                                        logger.debug(f"✅ Audio ready state: {ready_state} (sufficient data)")
-                                        return True
-                                    else:
-                                        logger.debug(f"⏳ Audio ready state: {ready_state} (still loading...)")
+                                    logger.debug(f"🎵 Audio metadata: duration={duration:.2f}s, readyState={ready_state}, networkState={network_state}")
+
+                                    # ⭐ FIX: Chỉ chấp nhận readyState = 4 (HAVE_ENOUGH_DATA)
+                                    # readyState = 3 (HAVE_FUTURE_DATA) có thể chưa tải hết audio!
+                                    if ready_state != 4:
+                                        logger.debug(f"⏳ Audio chưa sẵn sàng: readyState={ready_state} (cần = 4)")
                                         return False
+
+                                    # ⭐ Kiểm tra buffered ranges - đảm bảo toàn bộ audio đã được buffer
+                                    if buffered:
+                                        buffered_start = buffered.get('start', 0)
+                                        buffered_end = buffered.get('end', 0)
+                                        buffer_coverage = (buffered_end - buffered_start) / duration * 100
+
+                                        logger.debug(f"📊 Buffered: {buffered_start:.2f}s - {buffered_end:.2f}s ({buffer_coverage:.1f}% of {duration:.2f}s)")
+
+                                        # Yêu cầu ít nhất 95% audio đã được buffer
+                                        if buffer_coverage < 95:
+                                            logger.debug(f"⏳ Audio chưa buffer đủ: {buffer_coverage:.1f}% < 95%")
+                                            return False
+                                    else:
+                                        logger.debug(f"⚠️ Không có thông tin buffered ranges")
+                                        # Không có buffered info, chỉ dựa vào readyState
+
+                                    # ⭐ Kiểm tra network state
+                                    # networkState: 0=EMPTY, 1=IDLE, 2=LOADING, 3=NO_SOURCE
+                                    if network_state == 2:  # LOADING
+                                        logger.debug(f"⏳ Audio vẫn đang loading (networkState=2)")
+                                        return False
+
+                                    # ⭐ Tất cả kiểm tra đã pass
+                                    logger.debug(f"✅ Audio hoàn toàn sẵn sàng!")
+                                    return True
                                 else:
-                                    logger.debug(f"⏳ Audio duration not ready yet: {duration}")
+                                    logger.debug(f"⏳ Audio duration không hợp lệ: {duration}")
                                     return False
                             except Exception as duration_error:
-                                logger.debug(f"⚠️ Cannot verify audio duration: {duration_error}")
-                                # Fallback: assume ready if src exists
-                                logger.debug(f"✅ Audio ready with selector: {selector}")
-                                return True
-                            
+                                logger.debug(f"⚠️ Không thể verify audio metadata: {duration_error}")
+                                # KHÔNG fallback - nếu không verify được thì chưa ready
+                                return False
+
             except NoSuchElementException:
                 continue
         return False
+
+    def _get_audio_duration(self) -> float:
+        """
+        Lấy duration hiện tại của audio element (nếu có)
+        Returns: duration in seconds, hoặc 0 nếu không tìm thấy
+        """
+        audio_selectors = [
+            ".speech-prompt-footer-actions-left audio[controls]",
+            ".speech-prompt-footer-actions-left audio",
+            "audio[controls][src]",
+            "audio[controls]",
+            ".ng-star-inserted audio",
+            "div[class*='footer-actions'] audio",
+            "div[class*='speech-prompt'] audio"
+        ]
+
+        for selector in audio_selectors:
+            try:
+                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                for element in elements:
+                    if element.is_displayed():
+                        src = element.get_attribute('src')
+                        if src and src.strip() and src != "":
+                            try:
+                                duration = self.driver.execute_script(
+                                    "return arguments[0].duration;", element
+                                )
+                                if duration and duration > 0 and duration != float('inf'):
+                                    return duration
+                            except:
+                                pass
+            except NoSuchElementException:
+                continue
+        return 0
 
     def _check_generation_errors(self) -> bool:
         """Kiểm tra có lỗi generation không"""
@@ -3008,7 +3103,7 @@ class GoogleAIStudioAutomation:
             # ⭐ CRITICAL: Đợi thêm để đảm bảo audio hoàn toàn ready
             logger.info("⏳ Đợi thêm 3s để đảm bảo audio đã sẵn sàng hoàn toàn...")
             time.sleep(3)
-            
+
             # Tìm audio element dựa trên cấu trúc HTML thực tế
             audio_selectors = [
                 # Audio element chính trong footer actions
@@ -3021,8 +3116,9 @@ class GoogleAIStudioAutomation:
                 ".ng-star-inserted audio",
                 "div[class*='footer-actions'] audio"
             ]
-            
+
             audio_element = None
+            audio_duration = 0
             for selector in audio_selectors:
                 try:
                     elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
@@ -3036,14 +3132,25 @@ class GoogleAIStudioAutomation:
                                     duration = self.driver.execute_script("return arguments[0].duration;", element)
                                     ready_state = self.driver.execute_script("return arguments[0].readyState;", element)
                                     logger.info(f"📊 Audio metadata: duration={duration:.2f}s, readyState={ready_state}")
-                                    
-                                    # Đợi thêm nếu ready_state chưa đủ
-                                    if ready_state < 3:
-                                        logger.info(f"⏳ Audio chưa sẵn sàng (readyState={ready_state}), đợi thêm...")
-                                        time.sleep(5)
+
+                                    # ⭐ FIX: Yêu cầu readyState = 4 để đảm bảo audio đã tải hoàn toàn
+                                    if ready_state < 4:
+                                        logger.info(f"⏳ Audio chưa hoàn toàn sẵn sàng (readyState={ready_state}), đợi thêm...")
+                                        # Đợi tối đa 30 giây để readyState = 4
+                                        wait_count = 0
+                                        while ready_state < 4 and wait_count < 10:
+                                            time.sleep(3)
+                                            ready_state = self.driver.execute_script("return arguments[0].readyState;", element)
+                                            wait_count += 1
+                                            logger.debug(f"⏳ Waiting for readyState=4... current={ready_state} ({wait_count}/10)")
+
+                                        if ready_state < 4:
+                                            logger.warning(f"⚠️ Timeout waiting for readyState=4, proceeding with readyState={ready_state}")
+
+                                    audio_duration = duration  # Lưu duration để tính thời gian đợi sau
                                 except Exception as meta_error:
                                     logger.debug(f"Cannot get audio metadata: {meta_error}")
-                                
+
                                 audio_element = element
                                 logger.info(f"Tìm thấy audio element với src: {src[:100]}...")
                                 break
@@ -3078,8 +3185,8 @@ class GoogleAIStudioAutomation:
             # Kiểm tra nếu src là blob URL hoặc data URL
             if audio_src.startswith('blob:') or audio_src.startswith('data:'):
                 logger.info("Audio là blob/data URL, tải trực tiếp...")
-                return self._download_blob_audio(audio_src, order_in_story=order_in_story, output_filename=output_filename)
-            
+                return self._download_blob_audio(audio_src, audio_duration=audio_duration, order_in_story=order_in_story, output_filename=output_filename)
+
             # Thử right-click context menu để download
             logger.info("Thử right-click download...")
             return self._download_via_context_menu(audio_element, order_in_story=order_in_story, output_filename=output_filename)
@@ -3088,37 +3195,38 @@ class GoogleAIStudioAutomation:
             logger.error(f"Lỗi khi tải audio: {str(e)}")
             return None
 
-    def _download_blob_audio(self, blob_url: str, order_in_story: int = None, output_filename: str = None) -> Optional[str]:
+    def _download_blob_audio(self, blob_url: str, audio_duration: float = 0, order_in_story: int = None, output_filename: str = None) -> Optional[str]:
         """
         Tải audio từ blob URL bằng Python - sử dụng JavaScript để convert blob thành base64
-        
+
         Args:
             blob_url: Blob URL của audio
+            audio_duration: Duration của audio (seconds) để tính adaptive wait time
             story_id: ID của story để tạo filename
             chapter_number: Số chương để tạo filename
-            
+
         Returns:
             Optional[str]: Đường dẫn file đã tải
         """
         try:
             logger.info(f"🎵 Tải audio từ blob URL bằng Python: {blob_url[:50]}...")
-            
+
             # Đảm bảo download directory tồn tại
             if not os.path.exists(self.download_path):
                 os.makedirs(self.download_path, exist_ok=True)
                 logger.info(f"📁 Đã tạo download directory: {self.download_path}")
-            
+
             # Tạo tên file với định dạng <story_id>_<chapter_number>.wav
             if output_filename:
                 filename = output_filename
             else:
                 filename = f"segment_{order_in_story}.wav"
-                
+
             filepath = os.path.join(self.download_path, filename)
-            
+
             # Method 1: Sử dụng JavaScript để convert blob thành base64 và Python để lưu
             logger.info("🔄 Method 1: Convert blob to base64...")
-            success = self._download_blob_via_base64(blob_url, filepath)
+            success = self._download_blob_via_base64(blob_url, filepath, audio_duration=audio_duration)
             if success:
                 return filepath
             
@@ -3141,16 +3249,25 @@ class GoogleAIStudioAutomation:
             logger.error(f"❌ Lỗi khi tải blob audio: {str(e)}")
             return None
 
-    def _download_blob_via_base64(self, blob_url: str, filepath: str) -> bool:
+    def _download_blob_via_base64(self, blob_url: str, filepath: str, audio_duration: float = 0) -> bool:
         """Convert blob URL thành base64 và lưu bằng Python"""
         try:
-            # ⭐ CRITICAL: Đợi thêm để đảm bảo audio đã được generate hoàn toàn
-            logger.info("⏳ Đợi thêm 5s để đảm bảo audio đã được generate hoàn toàn...")
-            time.sleep(5)
-            
-            # Set timeout cao hơn cho async script (120 giây)
+            # ⭐ CRITICAL: Adaptive wait time dựa trên audio duration
+            if audio_duration > 0:
+                # Công thức: Đợi tối thiểu 10s, hoặc 20% duration (whichever is larger)
+                # Ví dụ: 5 phút audio (300s) → đợi max(10, 60) = 60 giây
+                adaptive_wait = max(10, int(audio_duration * 0.2))
+                logger.info(f"⏳ Audio duration = {audio_duration:.1f}s → Đợi thêm {adaptive_wait}s để đảm bảo buffer hoàn toàn...")
+                time.sleep(adaptive_wait)
+            else:
+                logger.info("⏳ Đợi thêm 10s để đảm bảo audio đã được generate hoàn toàn...")
+                time.sleep(10)
+
+            # Set timeout cao hơn cho async script (240 giây cho audio dài)
             original_timeout = self.driver.timeouts.script
-            self.driver.set_script_timeout(120)  # Tăng từ 60s lên 120s
+            script_timeout = max(120, int(audio_duration * 0.5)) if audio_duration > 0 else 120
+            self.driver.set_script_timeout(script_timeout)
+            logger.info(f"⏱️ Set script timeout = {script_timeout}s")
             
             # JavaScript để convert blob thành base64 với progress tracking
             convert_script = f"""
