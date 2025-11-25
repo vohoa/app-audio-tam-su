@@ -97,7 +97,7 @@ PERPLEXITY_AI_PROFILE = config('PERPLEXITY_AI_PROFILE', default='perplexity_ai')
 
 # Perplexity Conversation JSON URL (optional)
 PERPLEXITY_CONVERSATION_JSON_URL = config('PERPLEXITY_CONVERSATION_JSON_URL', default='')
-PERPLEXITY_CREATE_PROMPT_IMAGES= config('PERPLEXITY_CREATE_PROMPT_IMAGES', default ='')
+PERPLEXITY_PROMPT_IMAGES= config('PERPLEXITY_PROMPT_IMAGES', default ='')
 # Perplexity AI timeouts
 PERPLEXITY_RESPONSE_TIMEOUT = config('PERPLEXITY_RESPONSE_TIMEOUT', default=60, cast=int)
 PERPLEXITY_PROMPT_DELAY = config('PERPLEXITY_PROMPT_DELAY', default=0.05, cast=float)
@@ -118,6 +118,16 @@ RUNWARE_DEFAULT_MODEL = config('RUNWARE_DEFAULT_MODEL', default='runware:101@1')
 RUNWARE_DEFAULT_WIDTH = config('RUNWARE_DEFAULT_WIDTH', default=1024, cast=int)
 RUNWARE_DEFAULT_HEIGHT = config('RUNWARE_DEFAULT_HEIGHT', default=1024, cast=int)
 
+# Runware LoRA Configuration
+# Parse JSON string from .env to Python list/dict
+import json
+_lora_config_str = config('RUNWARE_LORA_CONFIG', default='[]')
+try:
+    RUNWARE_LORA_CONFIG = json.loads(_lora_config_str)
+except json.JSONDecodeError:
+    print(f"⚠️ Invalid RUNWARE_LORA_CONFIG format in .env, using empty list")
+    RUNWARE_LORA_CONFIG = []
+
 # Generated images directory
 GENERATED_IMAGES_DIR = config(
     'GENERATED_IMAGES_DIR',
@@ -134,10 +144,59 @@ GENERATED_VIDEOS_DIR = config(
 VIDEO_FPS = config('VIDEO_FPS', default=1, cast=int)  # 1 frame per second (mỗi ảnh hiển thị 1 giây)
 VIDEO_TRANSITION_DURATION = config('VIDEO_TRANSITION_DURATION', default=0.5, cast=float)  # Thời gian chuyển cảnh
 
+# ============================================
+# LANGUAGE CONFIGURATION
+# ============================================
+
+# Supported languages - configurable from .env as JSON
+# Format: [{"code": "vi", "name": "Tiếng Việt"}, {"code": "en", "name": "English"}]
+_default_languages = [
+    {"code": "vi", "name": "Tiếng Việt"},
+    {"code": "en", "name": "English"},
+    {"code": "ja", "name": "日本語"},
+    {"code": "ko", "name": "한국어"},
+    {"code": "zh", "name": "中文"},
+    {"code": "fr", "name": "Français"},
+    {"code": "de", "name": "Deutsch"},
+    {"code": "es", "name": "Español"},
+    {"code": "th", "name": "ไทย"}
+]
+
+_languages_config_str = config('SUPPORTED_LANGUAGES', default='')
+try:
+    if _languages_config_str:
+        SUPPORTED_LANGUAGES = json.loads(_languages_config_str)
+    else:
+        SUPPORTED_LANGUAGES = _default_languages
+except json.JSONDecodeError:
+    print(f"⚠️ Invalid SUPPORTED_LANGUAGES format in .env, using default list")
+    SUPPORTED_LANGUAGES = _default_languages
+
+# Default language code
+DEFAULT_LANGUAGE = config('DEFAULT_LANGUAGE', default='vi')
+
 
 # ============================================
 # Helper functions for dynamic config updates
 # ============================================
+
+def get_supported_languages() -> list:
+    """Get list of supported languages"""
+    return SUPPORTED_LANGUAGES
+
+
+def get_default_language() -> str:
+    """Get default language code"""
+    return DEFAULT_LANGUAGE
+
+
+def get_language_name(code: str) -> str:
+    """Get language name by code"""
+    for lang in SUPPORTED_LANGUAGES:
+        if lang['code'] == code:
+            return lang['name']
+    return code
+
 
 def get_gemini_api_key() -> str:
     """Get current Gemini API Key from environment or .env file"""

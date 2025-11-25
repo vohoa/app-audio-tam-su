@@ -409,14 +409,24 @@ class SeleniumAudioGenerator:
             # Format prompt
             def get_action_word(role):
                 return "Read" if role.lower() == "narrator" else "Make"
-            
+
+            # Chuẩn hóa đặc điểm giọng cho narrator
+            def normalize_narrator_characteristics(characteristics, role):
+                if role.lower() == "narrator":
+                    return "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ."
+                return characteristics
+
             action_word_1 = get_action_word(role1)
             action_word_2 = get_action_word(role2)
-            
+
+            # Chuẩn hóa characteristics cho narrator
+            characteristics_1 = normalize_narrator_characteristics(characteristics_1, role1)
+            characteristics_2 = normalize_narrator_characteristics(characteristics_2, role2)
+
             # Capitalize voice names
             def capitalize_first_letter(text):
                 return text[:1].upper() + text[1:] if text else text
-            
+
             voice_name_1 = capitalize_first_letter(voice_name_1)
             voice_name_2 = capitalize_first_letter(voice_name_2)
             
@@ -670,14 +680,15 @@ class SeleniumAudioGenerator:
                                    use_segments: bool = True,
                                    cleanup_after: bool = True,
                                    voice_gender: str = 'male',
-                                   channel_intro: str = '') -> Dict:
+                                   channel_intro: str = '',
+                                   language: str = 'vi') -> Dict:
         """
         Tạo audio cho một chương truyện
-        
+
         Supports 2 modes:
         - Advanced (use_segments=True): AI speaker analysis → segments → merge
         - Simple (use_segments=False): Direct full chapter generation
-        
+
         Args:
             chapter_content: Nội dung chương
             chapter_id: ID của chương
@@ -687,7 +698,8 @@ class SeleniumAudioGenerator:
             chapter_number: Số thứ tự chương (để phân tích và cache)
             use_segments: True = advanced mode, False = simple mode
             cleanup_after: True = cleanup automation sau khi hoàn thành chapter (default: True)
-        
+            language: Mã ngôn ngữ (vi, en, ja, etc.) để tổ chức thư mục
+
         Returns:
             Dict chứa kết quả
         """
@@ -707,26 +719,32 @@ class SeleniumAudioGenerator:
                         'message': 'Không thể khởi tạo automation'
                     }
             
-            # Tạo thư mục theo tên truyện và tên file đơn giản
+            # Tạo thư mục theo ngôn ngữ và tên truyện
+            # Cấu trúc: audio_downloads/<language>/<story_slug>/chuong_xx.mp3
             if story_id and story_name:
                 # Tạo tên thư mục slug (không dấu, lowercase, underscore)
                 # Ví dụ: "Phàm nhân tu tiên" -> "pham_nhan_tu_tien"
                 safe_story = convert_to_slug(story_name)
-                story_folder = os.path.join(self.download_path, safe_story)
-                
+
+                # Tạo cấu trúc thư mục theo ngôn ngữ
+                lang_folder = os.path.join(self.download_path, language)
+                story_folder = os.path.join(lang_folder, safe_story)
+
                 # Kiểm tra và tạo thư mục nếu chưa có
                 if not os.path.exists(story_folder):
                     os.makedirs(story_folder, exist_ok=True)
                     logger.info(f"📁 Created story folder: {story_folder}")
-                
-                # Tên file đơn giản: chuong_xx.wav
-                output_filename = f"chuong_{chapter_num:02d}.wav"
+
+                # Tên file đơn giản: chuong_xx.mp3
+                output_filename = f"chuong_{chapter_num:02d}.mp3"
                 output_path = os.path.join(story_folder, output_filename)
             else:
-                # Fallback: lưu trực tiếp vào download_path với tên chapter
+                # Fallback: lưu trực tiếp vào download_path/<language> với tên chapter
+                lang_folder = os.path.join(self.download_path, language)
+                os.makedirs(lang_folder, exist_ok=True)
                 safe_title = "".join(c for c in chapter_title if c.isalnum() or c in (' ', '-', '_')).strip()
-                output_filename = f"chuong_{chapter_num}_{safe_title}.wav"
-                output_path = os.path.join(self.download_path, output_filename)
+                output_filename = f"chuong_{chapter_num}_{safe_title}.mp3"
+                output_path = os.path.join(lang_folder, output_filename)
             
             # ============================================
             # ADVANCED MODE: Segment-based generation
@@ -760,7 +778,7 @@ class SeleniumAudioGenerator:
                     if word_count <= MAX_CHUNK_SIZE:
                         logger.info("✅ Content fits in single chunk, generating directly...")
                         narrator_prompt = (
-                            "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người lớn. Giọng ấm áp, thấu hiểu như người bạn đang chia sẻ những tâm tư, câu chuyện đời thường trong đêm khuya.\n"
+                            "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ.\n"
                             f"Speaker 1: {full_content}"
                         )
 
@@ -784,7 +802,7 @@ class SeleniumAudioGenerator:
                             logger.info(f"🎯 Generating chunk {idx}/{len(chunks)} ({chunk_word_count} words)...")
 
                             chunk_prompt = (
-                                "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người lớn. Giọng ấm áp, thấu hiểu như người bạn đang chia sẻ những tâm tư, câu chuyện đời thường trong đêm khuya.\n"
+                                "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ.\n"
                                 f"Speaker 1: {chunk_text}"
                             )
 

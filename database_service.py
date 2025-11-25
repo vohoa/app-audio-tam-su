@@ -7,6 +7,7 @@ import os
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from logger_config import LoggerConfig
+from config import get_default_language
 
 # Initialize database logger
 logger = LoggerConfig.get_logger('database')
@@ -38,10 +39,19 @@ class DatabaseService:
                 author TEXT,
                 category TEXT,
                 cover_image TEXT,
+                language TEXT DEFAULT 'vi',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+
+        # Migration: Add language column if not exists (for existing databases)
+        try:
+            cursor.execute('ALTER TABLE stories ADD COLUMN language TEXT DEFAULT "vi"')
+            logger.info("Added language column to stories table")
+        except sqlite3.OperationalError:
+            # Column already exists
+            pass
 
         # Create chapters table
         cursor.execute('''
@@ -125,25 +135,30 @@ class DatabaseService:
         return self._row_to_dict(row)
 
     def create_story(self, name: str, description: str = '', author: str = '',
-                     category: str = '', cover_image: str = '') -> Dict:
+                     category: str = '', cover_image: str = '', language: str = None) -> Dict:
         """Create a new story"""
         conn = self.get_connection()
         cursor = conn.cursor()
 
+        # Use default language if not provided
+        if language is None:
+            language = get_default_language()
+
         cursor.execute('''
-            INSERT INTO stories (name, description, author, category, cover_image)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (name, description, author, category, cover_image))
+            INSERT INTO stories (name, description, author, category, cover_image, language)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (name, description, author, category, cover_image, language))
 
         story_id = cursor.lastrowid
         conn.commit()
         conn.close()
 
-        logger.info(f"Created story: {name} (ID: {story_id})")
+        logger.info(f"Created story: {name} (ID: {story_id}, Language: {language})")
         return self.get_story(story_id)
 
     def update_story(self, story_id: int, name: str = None, description: str = None,
-                     author: str = None, category: str = None, cover_image: str = None) -> Dict:
+                     author: str = None, category: str = None, cover_image: str = None,
+                     language: str = None) -> Dict:
         """Update an existing story"""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -167,6 +182,9 @@ class DatabaseService:
         if cover_image is not None:
             updates.append('cover_image = ?')
             params.append(cover_image)
+        if language is not None:
+            updates.append('language = ?')
+            params.append(language)
 
         if not updates:
             conn.close()

@@ -1,0 +1,77 @@
+
+"Nhiệm vụ: Phân tích đoạn văn bản tiếng Việt và trích xuất TOÀN BỘ lời thoại và đoạn dẫn truyện theo đúng thứ tự xuất hiện để chuẩn bị cho việc chuyển thành giọng nói bằng Gemini API.
+
+===RÀNG BUỘC NGHIÊM NGẶT - BẮT BUỘC TUÂN THỦ===
+
+1.  **KHÔNG RÚT GỌN**: Phải chép nguyên văn 100% mọi từ, câu, dấu câu, và định dạng xuống dòng.
+2.  **TÁCH BIỆT RÕ RÀNG**: Mỗi lượt thoại và mỗi đoạn dẫn truyện phải là một entry riêng biệt trong JSON.
+3.  **KHÔNG GỘP, KHÔNG TÓM TẮT**: Không được gộp các câu thoại hoặc đoạn dẫn truyện lại với nhau.
+
+===ĐỊNH DẠNG ĐẦU RA===
+
+Trả về **ĐÚNG VÀ CHỈ JSON** hợp lệ trong khối code, theo cấu trúc sau:
+
+```json
+{
+  "speakers": [
+    {
+      "speaker_id": 1,
+      "name": "tên nhân vật hoặc rỗng",
+      "age_category": "child|young_adult|middle_aged|elderly",
+      "gender": "male|female|unknown",
+      "role": "child|parent|grandparent|teacher|authority|neutral|narrator",
+      "dialogue": "[NGUYÊN VĂN ĐẦY ĐỦ - giữ mọi dấu câu và xuống dòng]",
+      "context": "mô tả ngắn tình huống",
+      "emotion": "vui|buồn|tức giận|lo lắng|bình thường|hào hứng|tường thuật",
+      "order_in_story": 1,
+      "voice": "tên-giọng-đọc-từ-danh-sách",
+      "characteristics": "mô tả chất giọng và phong thái"
+    }
+  ]
+}
+```
+
+===QUY TẮC XỬ LÝ - ĐỌC KỸ===
+
+**1. Phân biệt loại nội dung:**
+*   **LỜI THOẠI**: Là các đoạn nằm trong dấu ngoặc kép ("...") hoặc đi kèm các động từ như "nói", "hỏi", "đáp", "quát", "thì thầm".
+*   **DẪN TRUYỆN**: Mọi phần còn lại (miêu tả, tường thuật, hành động, suy nghĩ). Gán `role = "narrator"`, `emotion = "tường thuật"`, và `voice = "schedar"`.
+
+**2. Thứ tự và tách biệt:**
+*   Đánh số `order_in_story` tăng dần từ 1.
+*   Mỗi lượt thoại là một entry mới.
+*   Mỗi đoạn dẫn truyện là một entry riêng với `role = "narrator"`.
+*   Xử lý tuần tự từ đầu đến cuối văn bản.
+
+**3. Chọn giọng đọc (Trường `voice`):**
+Chỉ chọn MỘT giọng từ danh sách của Gemini API dưới đây, dựa trên `gender` và `age_category`.[6][7]
+
+*   **Dẫn truyện (Nam/Nữ - Trung tính, rõ ràng)**:
+    *   **schedar**: Giọng nữ trung tính, đều đặn (khuyến khích cho dẫn truyện).[6]
+    *   **zubenelgenubi**: Giọng nam trung tính, bình thường.[6]
+*   **Giọng Nữ**:
+    *   **sulafat**: Ấm áp, thân thiện (phù hợp vai mẹ, cô giáo).[6]
+    *   **vindemiatrix**: Êm dịu, nhẹ nhàng.[6]
+    *   **sadachbia**: Sôi nổi, hoạt bát (phù hợp nhân vật trẻ, năng động).[6]
+*   **Giọng Nam**:
+    *   **gacrux**: Trưởng thành, đĩnh đạc (phù hợp vai cha, người lớn tuổi).[6]
+    *   **rasalgethi**: Trầm, ấm (có thể dùng cho vai ông, hoặc nhân vật có chiều sâu).[6]
+*   **Giọng Trẻ em (Nam/Nữ)**:
+    *   **puck**: Giọng nam trẻ, tinh nghịch.[6]
+    *   **leda**: Giọng nữ trẻ.[6]
+*   **Các giọng khác để lựa chọn**:
+    *   *Thân thiện/Mềm mại*: achird, aoede, autonoe.[6]
+    *   *Mạnh mẽ/Chắc chắn*: alnilam, erinome, fenrir.[6]
+
+**4. Metadata:**
+*   **name**: Điền tên nhân vật nếu có. Nếu không, để rỗng hoặc ghi vai vế (ví dụ: Mẹ, Ông lão).
+*   **context**: Tóm tắt 1 câu về tình huống (ví dụ: An ủi con gái, Ra lệnh cho lính).
+*   **emotion**: Chọn một nhãn cảm xúc phù hợp. Dẫn truyện luôn là "tường thuật".
+*   **characteristics**: Mô tả thêm về giọng điệu mong muốn để AI diễn đạt tốt hơn, ví dụ: thì thầm và lo lắng, gằn giọng một cách giận dữ, nói nhanh và hào hứng.[7]
+
+Không giải thích, không ví dụ, không chú thích - **CHỈ TRẢ VỀ JSON** trong khối code.
+
+BẮT ĐẦU PHÂN TÍCH VĂN BẢN DƯỚI ĐÂY:
+<<<
+[PASTE_TEXT_HERE]
+>>>"

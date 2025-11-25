@@ -12,12 +12,13 @@ from typing import Optional, Dict, Any, List, Union
 from pathlib import Path
 
 try:
-    from runware import Runware, IImageInference, IInstantID
+    from runware import Runware, IImageInference, IInstantID, ILora
 except ImportError:
     print("⚠️ Runware SDK chưa được cài đặt. Chạy: pip install runware")
     Runware = None
     IImageInference = None
     IInstantID = None
+    ILora = None
 
 try:
     from unidecode import unidecode
@@ -31,6 +32,34 @@ import config
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def convert_lora_to_objects(lora_list: Optional[List[Dict[str, Any]]]) -> Optional[List]:
+    """
+    Convert LoRA dictionary list to ILora object list
+
+    Args:
+        lora_list: List of LoRA dicts [{"model": "...", "weight": 1.0}, ...]
+
+    Returns:
+        List of ILora objects or None
+    """
+    if not lora_list or not ILora:
+        return None
+
+    try:
+        lora_objects = []
+        for lora_dict in lora_list:
+            if isinstance(lora_dict, dict):
+                lora_obj = ILora(
+                    model=lora_dict.get("model"),
+                    weight=lora_dict.get("weight", 1.0)
+                )
+                lora_objects.append(lora_obj)
+        return lora_objects if lora_objects else None
+    except Exception as e:
+        logger.error(f"Failed to convert LoRA to objects: {e}")
+        return None
 
 
 class CharacterManager:
@@ -258,6 +287,7 @@ class RunwareImageGenerator:
                             max_retries: int = 2,
                             character_references: Optional[List[str]] = None,
                             instant_id_strength: float = 0.8,
+                            lora: Optional[List[Dict[str, Any]]] = None,
                             **kwargs) -> Optional[List[Dict[str, Any]]]:
         """
         Tạo hình ảnh từ prompt với retry logic và hỗ trợ character consistency
@@ -270,6 +300,7 @@ class RunwareImageGenerator:
             max_retries: Số lần thử lại tối đa
             character_references: List đường dẫn đến reference images của nhân vật
             instant_id_strength: Độ mạnh InstantID (0.0-1.0), cao hơn = giống reference hơn
+            lora: List LoRA models với format [{"model": "civitai:xxx@xxx", "weight": 1.0}, ...]
             **kwargs: Các tham số bổ sung
 
         Returns:
@@ -295,6 +326,14 @@ class RunwareImageGenerator:
                     "height": height,
                     **kwargs
                 }
+
+                # Add LoRA if provided
+                if lora and len(lora) > 0:
+                    logger.info(f"Using {len(lora)} LoRA model(s)")
+                    # Convert dict to ILora objects
+                    lora_objects = convert_lora_to_objects(lora)
+                    if lora_objects:
+                        request_params["lora"] = lora_objects
 
                 # Add InstantID if character references provided
                 if character_references and len(character_references) > 0 and IInstantID:
@@ -363,7 +402,9 @@ class RunwareImageGenerator:
                                        height: int = 1344,
                                        characters_json_path: Optional[str] = None,
                                        instant_id_strength: float = 0.8,
-                                       auto_create_characters_template: bool = False) -> Dict[str, Any]:
+                                       lora: Optional[List[Dict[str, Any]]] = None,
+                                       auto_create_characters_template: bool = False,
+                                       language: str = 'vi') -> Dict[str, Any]:
         """
         Tạo hình ảnh từ file JSON chứa prompts với hỗ trợ character consistency
 
@@ -378,12 +419,19 @@ class RunwareImageGenerator:
             height: Chiều cao ảnh
             characters_json_path: Đường dẫn đến file characters.json (None = tự tìm)
             instant_id_strength: Độ mạnh InstantID (0.0-1.0)
+            lora: List LoRA models với format [{"model": "civitai:xxx@xxx", "weight": 1.0}, ...] (None = dùng config từ .env)
             auto_create_characters_template: Tự động tạo template nếu không tìm thấy
 
         Returns:
             Dict với thông tin kết quả
         """
         try:
+            # Use LoRA from config if not provided
+            if lora is None:
+                lora = config.RUNWARE_LORA_CONFIG
+                if lora and len(lora) > 0:
+                    logger.info(f"Using LoRA config from .env: {lora}")
+
             # Read JSON file
             logger.info(f"Reading prompts from: {json_path}")
 
@@ -437,18 +485,19 @@ class RunwareImageGenerator:
             else:
                 logger.info("ℹ️ Generating images WITHOUT character consistency (normal mode)")
 
-            # Setup output directory
+            # Setup output directory with language support
+            # Structure: audio_downloads/<language>/<story_slug>/images/chapter_X/
             if not output_dir:
                 # Auto-create output dir in story folder if story info provided
                 if story_name or story_id:
                     from selenium_audio_generator import convert_to_slug
-                    import config
 
                     safe_story_name = convert_to_slug(story_name) if story_name else f"story_{story_id}"
                     chapter_folder = f"chapter_{chapter_number}" if chapter_number else "images"
 
                     output_dir = os.path.join(
                         config.AUDIO_DOWNLOAD_PATH,
+                        language,
                         safe_story_name,
                         'images',
                         chapter_folder
@@ -459,6 +508,7 @@ class RunwareImageGenerator:
                     output_dir = os.path.join(
                         os.path.dirname(os.path.abspath(__file__)),
                         'generated_images',
+                        language,
                         json_filename
                     )
             
@@ -595,7 +645,8 @@ class RunwareImageGenerator:
                         width=width,
                         height=height,
                         character_references=character_refs if character_refs else None,
-                        instant_id_strength=instant_id_strength
+                        instant_id_strength=instant_id_strength,
+                        lora=lora
                     )
                     
                     if images:
@@ -744,19 +795,36 @@ if __name__ == "__main__":
     # Test with a sample prompt
     async def test():
         generator = RunwareImageGenerator()
-        
+
         async with generator:
+            # Test 1: Generate image with LoRA from config
+            print("\n=== Test 1: Generate image with LoRA from .env config ===")
+            print(f"LoRA Config from .env: {config.RUNWARE_LORA_CONFIG}")
+
             images = await generator.generate_image(
+                prompt="A cute cartoon child reading a book under a tree, children's book illustration style",
+                model=config.RUNWARE_DEFAULT_MODEL,
+                width=config.RUNWARE_DEFAULT_WIDTH,
+                height=config.RUNWARE_DEFAULT_HEIGHT,
+                lora=config.RUNWARE_LORA_CONFIG  # Using LoRA from .env
+            )
+
+            if images:
+                print(f"✓ Generated {len(images)} image(s) with LoRA")
+                for idx, img in enumerate(images):
+                    print(f"  Image {idx + 1}: {img}")
+
+            # Test 2: Generate without LoRA
+            print("\n=== Test 2: Generate image without LoRA ===")
+            images2 = await generator.generate_image(
                 prompt="A bustling city street at night",
                 model="runware:101@1",
                 width=1024,
                 height=1024
             )
-            
-            if images:
-                print(f"Generated {len(images)} images")
-                for idx, img in enumerate(images):
-                    print(f"Image {idx + 1}: {img}")
-    
+
+            if images2:
+                print(f"✓ Generated {len(images2)} image(s) without LoRA")
+
     # Run test
     asyncio.run(test())

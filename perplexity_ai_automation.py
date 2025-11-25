@@ -166,7 +166,7 @@ class PerplexityAIAutomation:
                 options=options,
                 browser_executable_path=self.chrome_binary_path,
                 use_subprocess=True,
-                version_main=142  # Chỉ định version Chrome để tải đúng ChromeDriver
+                # version_main=141  # Chỉ định version Chrome để tải đúng ChromeDriver
             )
             
             self.wait = WebDriverWait(self.driver, 20)
@@ -873,20 +873,33 @@ class PerplexityAIAutomation:
             return False
 
     def clean_html_syntax_highlighted_text(self, html_text: str) -> str:
-        """Clean HTML text by removing tags"""
+        """Clean HTML text by removing tags while preserving JSON structure"""
         try:
             import re
+
+            # Remove all HTML tags but keep the text content
             clean_text = re.sub(r'<[^>]+>', '', html_text)
+
+            # Decode HTML entities
             clean_text = clean_text.replace('&quot;', '"')
             clean_text = clean_text.replace('&lt;', '<')
             clean_text = clean_text.replace('&gt;', '>')
             clean_text = clean_text.replace('&amp;', '&')
             clean_text = clean_text.replace('&#39;', "'")
-            
+            clean_text = clean_text.replace('&nbsp;', ' ')
+
+            # For JSON content, preserve newlines but clean up excessive whitespace
+            # Split by newlines, strip each line, but keep empty lines for JSON formatting
             lines = clean_text.split('\n')
-            cleaned_lines = [line.strip() for line in lines if line.strip()]
+            cleaned_lines = []
+            for line in lines:
+                stripped = line.strip()
+                # Keep the line if it has content or if we're in the middle of JSON
+                if stripped:
+                    cleaned_lines.append(stripped)
+
             clean_text = '\n'.join(cleaned_lines)
-            
+
             return clean_text.strip()
         except Exception as e:
             logger.debug(f"Error cleaning HTML: {e}")
@@ -904,20 +917,29 @@ class PerplexityAIAutomation:
             logger.info("Reading response from DOM...")
             time.sleep(3)  # Wait for content to load
             
-            # Perplexity's actual structure for code blocks
+            # Perplexity's actual structure for code blocks (Updated Nov 2024)
             response_selectors = [
+                # NEW: Current Perplexity structure - div.codeWrapper > div > span > code
+                # The code element contains all the JSON text within nested spans
+                "div.codeWrapper code",
+                "div.codeWrapper span code",
+                "div.codeWrapper div span code",
+
+                # Alternative: Target the parent span that contains the code
+                "div.codeWrapper span[style*='white-space: pre']",
+
                 # Specific Perplexity code block structure
                 "div[id^='markdown-content-'] pre code",
                 "div[class*='codeWrapper'] code",
                 "pre.not-prose code",
-                
+
                 # Fallback selectors
                 "[data-testid*='answer'] pre code",
                 "[data-testid*='response'] pre code",
                 "div[class*='answer'] pre code",
                 "div[class*='response'] pre code",
                 "article pre code",
-                
+
                 # General selectors (last resort)
                 "pre code",
                 "[data-testid*='answer']",
@@ -938,23 +960,31 @@ class PerplexityAIAutomation:
                             if not element.is_displayed():
                                 logger.debug(f"Element {idx} not displayed, skipping")
                                 continue
-                            
+
                             # Try to get text using multiple methods
                             text = None
-                            
-                            # Method 1: .text property
-                            text = element.text
-                            logger.debug(f"Element {idx} .text length: {len(text) if text else 0}")
-                            
-                            # Method 2: textContent via JavaScript
+
+                            # Method 1: textContent via JavaScript (best for nested spans)
+                            text = self.driver.execute_script(
+                                "return arguments[0].textContent;",
+                                element
+                            )
+                            logger.debug(f"Element {idx} textContent length: {len(text) if text else 0}")
+
+                            # Method 2: .text property
+                            if not text or len(text.strip()) < 50:
+                                text = element.text
+                                logger.debug(f"Element {idx} .text length: {len(text) if text else 0}")
+
+                            # Method 3: innerText via JavaScript (handles visibility)
                             if not text or len(text.strip()) < 50:
                                 text = self.driver.execute_script(
-                                    "return arguments[0].textContent;",
+                                    "return arguments[0].innerText;",
                                     element
                                 )
-                                logger.debug(f"Element {idx} textContent length: {len(text) if text else 0}")
-                            
-                            # Method 3: Clean innerHTML from syntax highlighting
+                                logger.debug(f"Element {idx} innerText length: {len(text) if text else 0}")
+
+                            # Method 4: Clean innerHTML from syntax highlighting
                             if not text or len(text.strip()) < 50:
                                 html_content = self.driver.execute_script(
                                     "return arguments[0].innerHTML;",
@@ -973,7 +1003,7 @@ class PerplexityAIAutomation:
                                     logger.info(f"✓ Found JSON response with selector '{selector}': {len(text)} chars")
                                     logger.info(f"Preview: {text[:200]}...")
                                     return text.strip()
-                                elif '"speakers"' in text or '"speaker_id"' in text:
+                                elif '"speakers"' in text or '"speaker_id"' in text or '"prompts"' in text:
                                     # Contains JSON structure even without leading brace
                                     logger.info(f"✓ Found JSON-like response with selector '{selector}': {len(text)} chars")
                                     logger.info(f"Preview: {text[:200]}...")
@@ -988,7 +1018,59 @@ class PerplexityAIAutomation:
                 except Exception as e:
                     logger.debug(f"Selector {selector} failed: {e}")
                     continue
-            
+
+            # FALLBACK: Use JavaScript to find code blocks with JSON content
+            logger.info("🔍 Trying JavaScript fallback to find JSON content...")
+            try:
+                # Find all code elements and check their content
+                js_script = """
+                    var codeElements = document.querySelectorAll('code');
+                    for (var i = 0; i < codeElements.length; i++) {
+                        var text = codeElements[i].textContent;
+                        if (text && text.length > 100 &&
+                            (text.includes('"prompts"') || text.includes('"id"') || text.includes('"content"'))) {
+                            return text;
+                        }
+                    }
+                    // Also try codeWrapper divs
+                    var wrappers = document.querySelectorAll('.codeWrapper, [class*="codeWrapper"]');
+                    for (var i = 0; i < wrappers.length; i++) {
+                        var text = wrappers[i].textContent;
+                        if (text && text.length > 100 &&
+                            (text.includes('"prompts"') || text.includes('"id"') || text.includes('"content"'))) {
+                            return text;
+                        }
+                    }
+                    return null;
+                """
+                text = self.driver.execute_script(js_script)
+                if text and len(text.strip()) > 50:
+                    text_stripped = text.strip()
+                    if text_stripped.startswith('{') or text_stripped.startswith('[') or '"prompts"' in text:
+                        logger.info(f"✓ Found JSON via JavaScript fallback: {len(text)} chars")
+                        logger.info(f"Preview: {text[:200]}...")
+                        return text.strip()
+            except Exception as js_error:
+                logger.debug(f"JavaScript fallback failed: {js_error}")
+
+            # FALLBACK 2: Get all page text and extract JSON
+            logger.info("🔍 Trying to extract JSON from page source...")
+            try:
+                page_source = self.driver.page_source
+                import re
+                # Find JSON that starts with {"prompts": or similar
+                json_pattern = r'\{[^{}]*"prompts"\s*:\s*\[[^\]]*\]'
+                # More comprehensive pattern
+                json_match = re.search(r'\{\s*"prompts"\s*:\s*\[[\s\S]*?\]\s*\}', page_source)
+                if json_match:
+                    text = json_match.group(0)
+                    # Clean HTML entities
+                    text = text.replace('&quot;', '"').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+                    logger.info(f"✓ Found JSON via regex from page source: {len(text)} chars")
+                    return text
+            except Exception as regex_error:
+                logger.debug(f"Regex extraction failed: {regex_error}")
+
             logger.error("❌ Could not find response in DOM")
             return None
             
@@ -1281,15 +1363,16 @@ class PerplexityAIAutomation:
             logger.error(f"Failed to save file: {e}", exc_info=True)
             return None
     
-    def save_image_prompt_to_file(self, content: str, story_name: str, story_id: int, chapter_number: int) -> Optional[str]:
+    def save_image_prompt_to_file(self, content: str, story_name: str, story_id: int, chapter_number: int, language: str = 'vi') -> Optional[str]:
         """
-        Lưu image prompt vào file trong story folder: audio_downloads/<story_name>/image_prompts/
+        Lưu image prompt vào file trong story folder: audio_downloads/<language>/<story_name>/image_prompts/
 
         Args:
             content: Nội dung cần lưu
             story_name: Tên story (BẮT BUỘC)
             story_id: ID story
             chapter_number: Số chương
+            language: Mã ngôn ngữ (vi, en, ja, etc.)
 
         Returns:
             File path hoặc None
@@ -1299,11 +1382,12 @@ class PerplexityAIAutomation:
             from selenium_audio_generator import convert_to_slug
             story_folder = convert_to_slug(story_name)
 
-            # Tạo đường dẫn: audio_downloads/<story_name>/image_prompts/
+            # Tạo đường dẫn: audio_downloads/<language>/<story_name>/image_prompts/
             base_dir = os.path.dirname(os.path.abspath(__file__))
             prompts_dir = os.path.join(
                 base_dir,
                 'audio_downloads',
+                language,
                 story_folder,
                 'image_prompts'
             )
@@ -1354,9 +1438,9 @@ class PerplexityAIAutomation:
             True nếu thành công
         """
         try:
-            url = getattr(config, "PERPLEXITY_CREATE_PROMPT_IMAGES", None)
+            url = getattr(config, "PERPLEXITY_PROMPT_IMAGES", None)
             if not url:
-                logger.warning("PERPLEXITY_CREATE_PROMPT_IMAGES not set")
+                logger.warning("PERPLEXITY_PROMPT_IMAGES not set")
                 return True  # Not critical
             
             logger.info(f"Opening image prompt page: {url}")
@@ -1390,31 +1474,45 @@ class PerplexityAIAutomation:
             if not self.driver:
                 if not self.start_browser():
                     return None
-            
-            # Open Perplexity
-            if "perplexity" not in self.driver.current_url.lower():
-                if not self.open_perplexity():
-                    return None
-            
+
+            # Go directly to https://www.perplexity.ai/
+            logger.info("🌐 Opening https://www.perplexity.ai/...")
+            self.driver.get("https://www.perplexity.ai/")
+            time.sleep(3)
+
             # Check login
             if not self.is_logged_in():
                 logger.warning("⚠️ Not logged in")
                 logger.info("Please login manually...")
                 input("Press Enter after logging in...")
-                
+
                 if not self.is_logged_in():
                     logger.error("❌ Still not logged in")
                     return None
-                
+
                 logger.info("✓ Login verified")
-            
-            # Go to conversation page if configured
-            if hasattr(config, 'PERPLEXITY_CONVERSATION_JSON_URL') and config.PERPLEXITY_CONVERSATION_JSON_URL:
-                self.goto_conversation_json_page()
-            
+
+            # Load prompt template from prompt_conversation.txt
+            prompt_file_path = os.path.join(os.path.dirname(__file__), 'prompt_conversation.txt')
+            if not os.path.exists(prompt_file_path):
+                logger.error(f"❌ Không tìm thấy file prompt_conversation.txt tại: {prompt_file_path}")
+                return None
+
+            with open(prompt_file_path, 'r', encoding='utf-8') as f:
+                prompt_template = f.read()
+
+            # Replace placeholder with actual chapter content
+            if '[PASTE_TEXT_HERE]' in prompt_template:
+                full_prompt = prompt_template.replace('[PASTE_TEXT_HERE]', chapter_content)
+            else:
+                # If no placeholder, append chapter content at the end
+                full_prompt = prompt_template + "\n" + chapter_content
+
+            logger.info(f"📝 Đã load prompt template từ prompt_conversation.txt")
+            logger.info(f"📖 Sending combined prompt ({len(full_prompt)} chars)...")
+
             # Send prompt
-            logger.info(f"📖 Sending content ({len(chapter_content)} chars)...")
-            if not self.send_prompt(chapter_content):
+            if not self.send_prompt(full_prompt):
                 return None
             
             # Wait for response
@@ -1457,7 +1555,8 @@ class PerplexityAIAutomation:
     
     def generate_image_prompts(self, chapter_content: str, story_name: str,
                                story_id: int = None, chapter_number: int = None,
-                               timeout: int = None, save_to_file: bool = True) -> Optional[Dict[str, Any]]:
+                               timeout: int = None, save_to_file: bool = True,
+                               language: str = 'vi') -> Optional[Dict[str, Any]]:
         """
         Quy trình hoàn chỉnh: tạo image prompts JSON từ Perplexity
 
@@ -1468,6 +1567,7 @@ class PerplexityAIAutomation:
             chapter_number: Số chương (optional, dùng cho tên file)
             timeout: Timeout cho response
             save_to_file: Có lưu file không
+            language: Mã ngôn ngữ (vi, en, ja, etc.)
 
         Returns:
             JSON data hoặc None
@@ -1477,31 +1577,45 @@ class PerplexityAIAutomation:
             if not self.driver:
                 if not self.start_browser():
                     return None
-            
-            # Open Perplexity
-            if "perplexity" not in self.driver.current_url.lower():
-                if not self.open_perplexity():
-                    return None
-            
+
+            # Go directly to https://www.perplexity.ai/
+            logger.info("🌐 Opening https://www.perplexity.ai/...")
+            self.driver.get("https://www.perplexity.ai/")
+            time.sleep(3)
+
             # Check login
             if not self.is_logged_in():
                 logger.warning("⚠️ Not logged in")
                 logger.info("Please login manually...")
                 input("Press Enter after logging in...")
-                
+
                 if not self.is_logged_in():
                     logger.error("❌ Still not logged in")
                     return None
-                
+
                 logger.info("✓ Login verified")
-            
-            # Go to image prompt page if configured
-            if hasattr(config, 'PERPLEXITY_CREATE_PROMPT_IMAGES') and config.PERPLEXITY_CREATE_PROMPT_IMAGES:
-                self.goto_prompt_json_page()
-            
+
+            # Load prompt template from prompt_image.txt
+            prompt_file_path = os.path.join(os.path.dirname(__file__), 'prompt_image.txt')
+            if not os.path.exists(prompt_file_path):
+                logger.error(f"❌ Không tìm thấy file prompt_image.txt tại: {prompt_file_path}")
+                return None
+
+            with open(prompt_file_path, 'r', encoding='utf-8') as f:
+                prompt_template = f.read()
+
+            # Replace placeholder with actual chapter content
+            if '[PASTE_CHAPTER_HERE]' in prompt_template:
+                full_prompt = prompt_template.replace('[PASTE_CHAPTER_HERE]', chapter_content)
+            else:
+                # If no placeholder, append chapter content at the end
+                full_prompt = prompt_template + "\n" + chapter_content
+
+            logger.info(f"📝 Đã load prompt template từ prompt_image.txt")
+            logger.info(f"🎨 Sending combined prompt ({len(full_prompt)} chars)...")
+
             # Send prompt
-            logger.info(f"🎨 Sending content for image prompts ({len(chapter_content)} chars)...")
-            if not self.send_prompt(chapter_content):
+            if not self.send_prompt(full_prompt):
                 return None
             
             # Wait for response
@@ -1524,14 +1638,15 @@ class PerplexityAIAutomation:
                     content_to_save = json_data["raw_content"]
                 else:
                     content_to_save = json.dumps(json_data, indent=2, ensure_ascii=False)
-                
+
                 saved_path = self.save_image_prompt_to_file(
                     content_to_save,
                     story_name,
                     story_id,
-                    chapter_number
+                    chapter_number,
+                    language
                 )
-                
+
                 if saved_path:
                     logger.info(f"✓ Image prompts saved to: {saved_path}")
                     json_data["saved_filepath"] = saved_path

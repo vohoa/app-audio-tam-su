@@ -3,12 +3,13 @@ Story Manager Dialog - Add, Edit, Delete Stories
 """
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QLineEdit, QTextEdit, QMessageBox, QGroupBox, QFormLayout
+    QLineEdit, QTextEdit, QMessageBox, QGroupBox, QFormLayout, QComboBox
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from database_service import DatabaseService
 from logger_config import LoggerConfig
+from config import get_supported_languages, get_default_language
 
 logger = LoggerConfig.get_logger('story_manager')
 
@@ -39,12 +40,36 @@ class StoryEditorDialog(QDialog):
         form_group = QGroupBox('Thông tin truyện')
         form_layout = QFormLayout()
 
-        # Story name
+        # Story name with language selector
+        name_layout = QHBoxLayout()
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText('Nhập tên truyện...')
         if self.story:
             self.name_input.setText(self.story.get('name', ''))
-        form_layout.addRow('Tên truyện *:', self.name_input)
+        name_layout.addWidget(self.name_input, 1)  # Stretch factor 1
+
+        # Language dropdown
+        self.language_combo = QComboBox()
+        self.language_combo.setMinimumWidth(120)
+        languages = get_supported_languages()
+        for lang in languages:
+            self.language_combo.addItem(f"{lang['name']}", lang['code'])
+
+        # Set current language
+        if self.story:
+            current_lang = self.story.get('language', get_default_language())
+        else:
+            current_lang = get_default_language()
+
+        # Find and set index for current language
+        for i in range(self.language_combo.count()):
+            if self.language_combo.itemData(i) == current_lang:
+                self.language_combo.setCurrentIndex(i)
+                break
+
+        name_layout.addWidget(self.language_combo)
+
+        form_layout.addRow('Tên truyện *:', name_layout)
 
         # Author
         self.author_input = QLineEdit()
@@ -97,6 +122,7 @@ class StoryEditorDialog(QDialog):
         author = self.author_input.text().strip()
         category = self.category_input.text().strip()
         description = self.description_input.toPlainText().strip()
+        language = self.language_combo.currentData()
 
         try:
             if self.story:
@@ -106,7 +132,8 @@ class StoryEditorDialog(QDialog):
                     name=name,
                     author=author,
                     category=category,
-                    description=description
+                    description=description,
+                    language=language
                 )
                 QMessageBox.information(self, 'Thành công', 'Đã cập nhật truyện!')
             else:
@@ -115,7 +142,8 @@ class StoryEditorDialog(QDialog):
                     name=name,
                     author=author,
                     category=category,
-                    description=description
+                    description=description,
+                    language=language
                 )
                 QMessageBox.information(self, 'Thành công', 'Đã thêm truyện mới!')
 

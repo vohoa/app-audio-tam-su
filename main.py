@@ -29,6 +29,8 @@ import config
 from selenium_audio_generator import SeleniumAudioGenerator, convert_to_slug
 from story_manager_dialog import StoryEditorDialog
 from chapter_manager_dialog import ChapterEditorDialog
+from whisper_transcriber import ensure_srt_exists
+from video_generator import get_srt_path_for_chapter
 # Initialize logger for main module
 logger = LoggerConfig.get_logger('main')
 
@@ -52,7 +54,8 @@ class SeleniumAudioWorker(QThread):
                  story_name: Optional[str] = None,
                  chapter_number: Optional[int] = None,
                  voice_gender: str = 'male',
-                 channel_intro: str = ''):
+                 channel_intro: str = '',
+                 language: str = 'vi'):
         super().__init__()
         self.db_service = db_service
         self.chapter_id = chapter_id
@@ -64,6 +67,7 @@ class SeleniumAudioWorker(QThread):
         self.chapter_number = chapter_number
         self.voice_gender = voice_gender
         self.channel_intro = channel_intro
+        self.language = language
         self.should_stop = False
         self.generator = None
     
@@ -124,7 +128,8 @@ class SeleniumAudioWorker(QThread):
                 story_name=self.story_name,
                 chapter_number=self.chapter_number,
                 voice_gender=self.voice_gender,
-                channel_intro=self.channel_intro
+                channel_intro=self.channel_intro,
+                language=self.language
             )
             
             if self.should_stop:
@@ -144,24 +149,51 @@ class SeleniumAudioWorker(QThread):
             # Check success
             if result.get('success'):
                 audio_path = result.get('audio_path')
-                
+
                 if not audio_path:
                     logger.error("❌ Success=True but no audio_path in result")
                     logger.error(f"Result keys: {list(result.keys())}")
                     self.generator.cleanup()
                     self.finished.emit(False, 'Thất bại: Không có đường dẫn audio', None)
                     return
-                
+
+                # Generate SRT using Whisper
+                if self.story_name and self.chapter_number:
+                    self.progress.emit('Đang tạo SRT từ audio (Whisper)...')
+                    try:
+                        srt_path = get_srt_path_for_chapter(
+                            self.story_name,
+                            self.chapter_number,
+                            self.language
+                        )
+
+                        srt_success = ensure_srt_exists(
+                            audio_path=audio_path,
+                            srt_path=srt_path,
+                            language=self.language,
+                            model_name="large"
+                        )
+
+                        if srt_success:
+                            self.progress.emit(f'✓ Đã tạo SRT: {os.path.basename(srt_path)}')
+                        else:
+                            logger.warning(f"Failed to generate SRT for chapter {self.chapter_number}")
+                            self.progress.emit('⚠ Không thể tạo SRT, bỏ qua...')
+
+                    except Exception as srt_error:
+                        logger.warning(f"SRT generation error: {srt_error}")
+                        self.progress.emit('⚠ Lỗi tạo SRT, bỏ qua...')
+
                 # Upload audio to backend
                 self.progress.emit('Đang upload audio lên server...')
-                
+
                 try:
                     upload_result = self.db_service.upload_chapter_audio(
-                        self.chapter_id, 
+                        self.chapter_id,
                         audio_path
                     )
                     self.progress.emit('Đã upload audio thành công!')
-                    
+
                     self.finished.emit(True, 'Hoàn thành!', audio_path)
                     
                 except Exception as upload_error:
@@ -201,17 +233,18 @@ class SeleniumAudioWorker(QThread):
 
 class ConversationGenerationWorker(QThread):
     """Worker thread for generating conversation JSON using Grok AI"""
-    
+
     progress = pyqtSignal(str)  # Status message
     finished = pyqtSignal(bool, str, str)  # Success, message, json_path
-    
+
     def __init__(self,
                  story_id: int,
                  chapter_id: int,
                  chapter_title: str,
                  chapter_content: str,
                  story_name: Optional[str] = None,
-                 chapter_number: Optional[int] = None):
+                 chapter_number: Optional[int] = None,
+                 language: str = 'vi'):
         super().__init__()
         self.story_id = story_id
         self.chapter_id = chapter_id
@@ -219,6 +252,7 @@ class ConversationGenerationWorker(QThread):
         self.chapter_content = chapter_content
         self.story_name = story_name
         self.chapter_number = chapter_number
+        self.language = language
         self.should_stop = False
         self.generator = None
     
@@ -234,12 +268,13 @@ class ConversationGenerationWorker(QThread):
             from config import get_grok_ai_profile
             import os
 
-            # Create conversation directory in story folder: audio_downloads/<story_name>/conversations/
+            # Create conversation directory in story folder: audio_downloads/<language>/<story_name>/conversations/
             current_dir = os.path.dirname(os.path.abspath(__file__))
             safe_story_name = convert_to_slug(self.story_name) if self.story_name else f"story_{self.story_id}"
             conversation_dir = os.path.join(
                 current_dir,
                 'audio_downloads',
+                self.language,
                 safe_story_name,
                 'conversations'
             )
@@ -320,7 +355,8 @@ class PerplexityConversationGenerationWorker(QThread):
                  chapter_title: str,
                  chapter_content: str,
                  story_name: Optional[str] = None,
-                 chapter_number: Optional[int] = None):
+                 chapter_number: Optional[int] = None,
+                 language: str = 'vi'):
         super().__init__()
         self.story_id = story_id
         self.chapter_id = chapter_id
@@ -328,6 +364,7 @@ class PerplexityConversationGenerationWorker(QThread):
         self.chapter_content = chapter_content
         self.story_name = story_name
         self.chapter_number = chapter_number
+        self.language = language
         self.should_stop = False
         self.generator = None
 
@@ -343,12 +380,13 @@ class PerplexityConversationGenerationWorker(QThread):
             from config import get_perplexity_ai_profile
             import os
 
-            # Create conversation directory in story folder: audio_downloads/<story_name>/conversations/
+            # Create conversation directory in story folder: audio_downloads/<language>/<story_name>/conversations/
             current_dir = os.path.dirname(os.path.abspath(__file__))
             safe_story_name = convert_to_slug(self.story_name) if self.story_name else f"story_{self.story_id}"
             conversation_dir = os.path.join(
                 current_dir,
                 'audio_downloads',
+                self.language,
                 safe_story_name,
                 'conversations'
             )
@@ -419,17 +457,18 @@ class PerplexityConversationGenerationWorker(QThread):
 
 class ImagePromptGenerationWorker(QThread):
     """Worker thread for generating image prompts using Perplexity AI"""
-    
+
     progress = pyqtSignal(str)  # Status message
     finished = pyqtSignal(bool, str, str)  # Success, message, json_path
-    
+
     def __init__(self,
                  story_id: int,
                  chapter_id: int,
                  chapter_title: str,
                  chapter_content: str,
                  story_name: Optional[str] = None,
-                 chapter_number: Optional[int] = None):
+                 chapter_number: Optional[int] = None,
+                 language: str = 'vi'):
         super().__init__()
         self.story_id = story_id
         self.chapter_id = chapter_id
@@ -437,6 +476,7 @@ class ImagePromptGenerationWorker(QThread):
         self.chapter_content = chapter_content
         self.story_name = story_name
         self.chapter_number = chapter_number
+        self.language = language
         self.should_stop = False
         self.generator = None
     
@@ -455,9 +495,80 @@ class ImagePromptGenerationWorker(QThread):
             from config import get_conversations_dir, get_perplexity_ai_profile
             import config
 
-            # Use chapter_content directly for image prompt generation
+            # NEW: Get content from conversation file if available, otherwise use chapter_content
             content_to_use = self.chapter_content
-            self.progress.emit('✓ Sử dụng nội dung chapter để tạo image prompts')
+            safe_story_name = convert_to_slug(self.story_name) if self.story_name else f"story_{self.story_id}"
+            conversation_dir = os.path.join(
+                config.AUDIO_DOWNLOAD_PATH,
+                self.language,
+                safe_story_name,
+                'conversations'
+            )
+            conversation_filename = f"{self.story_id}_{self.chapter_number or 0}.json"
+            conversation_path = os.path.join(conversation_dir, conversation_filename)
+
+            # Check if conversation file exists
+            if os.path.exists(conversation_path):
+                self.progress.emit(f'📄 Tìm thấy file conversation: {conversation_filename}')
+                try:
+                    with open(conversation_path, 'r', encoding='utf-8') as f:
+                        conversation_data = json.load(f)
+
+                    # Send full JSON content instead of extracting text
+                    if 'speakers' in conversation_data:
+                        # Convert JSON to formatted string for sending
+                        content_to_use = json.dumps(conversation_data, ensure_ascii=False, indent=2)
+                        self.progress.emit('✓ Sử dụng toàn bộ nội dung JSON từ file conversation')
+                    else:
+                        self.progress.emit('⚠️ File conversation không đúng format, dùng nội dung chapter')
+                except Exception as e:
+                    logger.warning(f"Không thể đọc conversation file: {e}")
+                    self.progress.emit('⚠️ Lỗi đọc conversation, dùng nội dung chapter')
+            else:
+                # Try to create conversation file first
+                self.progress.emit('📝 Chưa có file conversation, đang tạo...')
+                try:
+                    os.makedirs(conversation_dir, exist_ok=True)
+
+                    temp_generator = PerplexityConversationGenerator(
+                        conversation_dir=conversation_dir,
+                        headless=False,
+                        profile_name=get_perplexity_ai_profile()
+                    )
+
+                    if self.should_stop:
+                        self.finished.emit(False, 'Đã dừng', None)
+                        return
+
+                    self.progress.emit('🔮 Đang tạo conversation với Perplexity AI...')
+
+                    result = temp_generator.create_conversation_full_workflow(
+                        chapter_content=self.chapter_content,
+                        story_name=self.story_name,
+                        story_id=self.story_id,
+                        chapter_number=self.chapter_number,
+                        save_to_file=True,
+                        filename=conversation_filename
+                    )
+
+                    temp_generator.close()
+
+                    if result and result.get('filepath') and os.path.exists(conversation_path):
+                        self.progress.emit('✓ Đã tạo file conversation thành công')
+                        # Load the newly created conversation
+                        with open(conversation_path, 'r', encoding='utf-8') as f:
+                            conversation_data = json.load(f)
+
+                        if 'speakers' in conversation_data:
+                            # Send full JSON content instead of extracting text
+                            content_to_use = json.dumps(conversation_data, ensure_ascii=False, indent=2)
+                            self.progress.emit('✓ Sử dụng toàn bộ nội dung JSON từ file conversation mới tạo')
+                    else:
+                        self.progress.emit('⚠️ Không tạo được conversation, dùng nội dung chapter')
+
+                except Exception as e:
+                    logger.warning(f"Không thể tạo conversation file: {e}")
+                    self.progress.emit('⚠️ Lỗi tạo conversation, dùng nội dung chapter')
 
             # Create generator
             self.generator = PerplexityConversationGenerator(
@@ -472,7 +583,7 @@ class ImagePromptGenerationWorker(QThread):
 
             # Send content to generate image prompts
             self.progress.emit('🎨 Đang gửi nội dung để tạo image prompts...')
-            self.progress.emit('(Sử dụng nội dung chapter)')
+            self.progress.emit('(Sử dụng nội dung từ conversation)')
 
             if self.should_stop:
                 self.finished.emit(False, 'Đã dừng', None)
@@ -523,17 +634,18 @@ class ImagePromptGenerationWorker(QThread):
 
 class RunwareImageGenerationWorker(QThread):
     """Worker thread for generating images from JSON prompts using Runware API"""
-    
+
     progress = pyqtSignal(str)  # Status message
     finished = pyqtSignal(bool, str, str)  # Success, message, output_dir
-    
+
     def __init__(self,
                  story_id: int,
                  chapter_id: int,
                  chapter_title: str,
                  chapter_content: str,
                  story_name: Optional[str] = None,
-                 chapter_number: Optional[int] = None):
+                 chapter_number: Optional[int] = None,
+                 language: str = 'vi'):
         super().__init__()
         self.story_id = story_id
         self.chapter_id = chapter_id
@@ -541,6 +653,7 @@ class RunwareImageGenerationWorker(QThread):
         self.chapter_content = chapter_content
         self.story_name = story_name
         self.chapter_number = chapter_number
+        self.language = language
         self.should_stop = False
     
     def run(self):
@@ -559,6 +672,7 @@ class RunwareImageGenerationWorker(QThread):
 
             prompts_dir = os.path.join(
                 config.AUDIO_DOWNLOAD_PATH,
+                self.language,
                 safe_story_name,
                 'image_prompts'
             )
@@ -567,10 +681,6 @@ class RunwareImageGenerationWorker(QThread):
 
             logger.info(f"Expected image prompts path: {json_path}")
             logger.info(f"File exists initially: {os.path.exists(json_path)}")
-
-            # Use chapter_content directly for image prompt generation
-            content_to_use = self.chapter_content
-            self.progress.emit('✓ Sử dụng nội dung chapter để tạo image prompts')
 
             # If JSON doesn't exist, generate it first
             if not os.path.exists(json_path):
@@ -589,15 +699,15 @@ class RunwareImageGenerationWorker(QThread):
                         return
 
                     self.progress.emit('🔮 Đang tạo image prompts với Perplexity AI...')
-                    self.progress.emit('(Sử dụng nội dung chapter)')
+                    self.progress.emit('(Sử dụng nội dung chapter trực tiếp)')
                     logger.info(f"Generating image prompts via Perplexity for story {self.story_id}, chapter {self.chapter_number}")
 
                     result = perplexity.generate_image_prompts(
-                        chapter_content=content_to_use,
+                        chapter_content=self.chapter_content,
                         story_name=self.story_name,
                         story_id=self.story_id,
                         chapter_number=self.chapter_number,
-                        timeout=120,
+                        timeout=480,
                         save_to_file=True
                     )
 
@@ -651,7 +761,8 @@ class RunwareImageGenerationWorker(QThread):
                     chapter_number=self.chapter_number,
                     model=config.RUNWARE_DEFAULT_MODEL,
                     width=config.RUNWARE_DEFAULT_WIDTH,
-                    height=config.RUNWARE_DEFAULT_HEIGHT
+                    height=config.RUNWARE_DEFAULT_HEIGHT,
+                    language=self.language
                 )
             )
             logger.info(f"Runware API call completed. Success: {result.get('success')}, Images: {result.get('generated_images', 0)}")
@@ -691,13 +802,14 @@ class RunwareImageGenerationWorker(QThread):
                     self.progress.emit('🎬 Bắt đầu tạo video từ ảnh và audio...')
                     
                     # Find audio file
-                    # Sử dụng slug cho tên thư mục audio
+                    # Sử dụng slug cho tên thư mục audio với language
                     safe_story_name = convert_to_slug(self.story_name or f"story_{self.story_id}")
                     audio_dir = os.path.join(
                         config.AUDIO_DOWNLOAD_PATH,
+                        self.language,
                         safe_story_name
                     )
-                    audio_filename = f"chuong_{self.chapter_number:02d}.wav"
+                    audio_filename = f"chuong_{self.chapter_number:02d}.mp3"
                     audio_path = os.path.join(audio_dir, audio_filename)
 
                     if not os.path.exists(audio_path):
@@ -714,30 +826,49 @@ class RunwareImageGenerationWorker(QThread):
                     
                     # Create video
                     try:
-                        from video_generator import VideoGenerator
+                        from video_generator import create_video_sync, get_srt_path_for_chapter
 
-                        video_generator = VideoGenerator()
-
-                        # Auto-generate video path in story folder: audio_downloads/<story_name>/videos/
+                        # Auto-generate video path in story folder: audio_downloads/<language>/<story_name>/videos/
                         safe_story_name = convert_to_slug(self.story_name or f"story_{self.story_id}")
                         video_dir = os.path.join(
                             config.AUDIO_DOWNLOAD_PATH,
+                            self.language,
                             safe_story_name,
                             'videos'
                         )
                         os.makedirs(video_dir, exist_ok=True)
-                        video_filename = f"chuong_{self.chapter_number:02d}.mp4"
+                        video_filename = f"chapter_{self.chapter_number:02d}.mp4"
                         video_path = os.path.join(video_dir, video_filename)
-                        
+
+                        # Get SRT path for sync (if exists)
+                        srt_path = get_srt_path_for_chapter(
+                            self.story_name or f"story_{self.story_id}",
+                            self.chapter_number,
+                            self.language
+                        )
+
+                        # Check if SRT file exists
+                        if os.path.exists(srt_path):
+                            self.progress.emit(f'🎯 Tìm thấy file SRT: {os.path.basename(srt_path)}')
+                            self.progress.emit('Sẽ sync video chính xác với audio')
+                        else:
+                            self.progress.emit('📝 Không có file SRT, sử dụng sync ước tính từ text')
+                            srt_path = None  # Don't pass non-existent path
+
                         self.progress.emit('🎥 Đang ghép ảnh và audio thành video...')
                         self.progress.emit('(Quá trình này có thể mất vài phút)')
-                        
-                        video_result = video_generator.create_video_from_image_dir(
+
+                        # Use create_video_sync with full sync support
+                        video_result = create_video_sync(
                             image_dir=output_dir,
                             audio_path=audio_path,
                             output_path=video_path,
+                            image_prompts_path=json_path,
+                            chapter_content=self.chapter_content,
+                            srt_path=srt_path,
                             fps=config.VIDEO_FPS,
-                            transition_duration=config.VIDEO_TRANSITION_DURATION
+                            transition_duration=config.VIDEO_TRANSITION_DURATION,
+                            language=self.language
                         )
                         
                         if self.should_stop:
@@ -799,6 +930,113 @@ class RunwareImageGenerationWorker(QThread):
             logger.error(f"RunwareImageGenerationWorker exception: {str(e)}", exc_info=True)
             self.finished.emit(False, f'Lỗi: {str(e)}', None)
     
+    def stop(self):
+        self.should_stop = True
+
+
+class WhisperSRTWorker(QThread):
+    """Worker thread for generating SRT subtitles using Whisper"""
+
+    progress = pyqtSignal(str)  # Status message
+    finished = pyqtSignal(bool, str, str)  # Success, message, srt_path
+
+    def __init__(self,
+                 story_id: int,
+                 chapter_id: int,
+                 chapter_number: int,
+                 story_name: Optional[str] = None,
+                 language: str = 'vi'):
+        super().__init__()
+        self.story_id = story_id
+        self.chapter_id = chapter_id
+        self.chapter_number = chapter_number
+        self.story_name = story_name
+        self.language = language
+        self.should_stop = False
+
+    def run(self):
+        srt_path = None
+
+        try:
+            from selenium_audio_generator import convert_to_slug
+            import config
+
+            # Find audio file
+            safe_story_name = convert_to_slug(self.story_name) if self.story_name else f"story_{self.story_id}"
+            audio_dir = os.path.join(
+                config.AUDIO_DOWNLOAD_PATH,
+                self.language,
+                safe_story_name
+            )
+
+            # Try multiple audio filename patterns (prefer mp3)
+            audio_path = None
+            audio_patterns = [
+                f"chuong_{self.chapter_number:02d}.mp3",
+                f"chuong_{self.chapter_number:02d}.wav",
+                f"chapter_{self.chapter_number}.mp3",
+                f"chapter_{self.chapter_number}.wav",
+            ]
+
+            for pattern in audio_patterns:
+                test_path = os.path.join(audio_dir, pattern)
+                if os.path.exists(test_path):
+                    audio_path = test_path
+                    break
+
+            if not audio_path:
+                self.progress.emit(f'❌ Không tìm thấy file audio cho chương {self.chapter_number}')
+                self.finished.emit(False, 'Không tìm thấy file audio', None)
+                return
+
+            self.progress.emit(f'✓ Tìm thấy audio: {os.path.basename(audio_path)}')
+
+            if self.should_stop:
+                self.finished.emit(False, 'Đã dừng', None)
+                return
+
+            # Get SRT path
+            srt_path = get_srt_path_for_chapter(
+                self.story_name or f"story_{self.story_id}",
+                self.chapter_number,
+                self.language
+            )
+
+            # Check if SRT already exists
+            if os.path.exists(srt_path):
+                self.progress.emit(f'⚠️ File SRT đã tồn tại: {os.path.basename(srt_path)}')
+                self.progress.emit('Đang tạo lại SRT mới...')
+
+            # Generate SRT using Whisper
+            self.progress.emit('🎤 Đang load model Whisper (medium)...')
+            self.progress.emit('(Quá trình này có thể mất 1-3 phút)')
+
+            if self.should_stop:
+                self.finished.emit(False, 'Đã dừng', None)
+                return
+
+            srt_success = ensure_srt_exists(
+                audio_path=audio_path,
+                srt_path=srt_path,
+                language=self.language,
+                model_name="large",
+                force_regenerate=True  # Always regenerate when called manually
+            )
+
+            if self.should_stop:
+                self.finished.emit(False, 'Đã dừng', None)
+                return
+
+            if srt_success:
+                self.progress.emit(f'✓ Đã tạo SRT: {os.path.basename(srt_path)}')
+                self.finished.emit(True, 'Hoàn thành tạo SRT!', srt_path)
+            else:
+                self.finished.emit(False, 'Không thể tạo file SRT', None)
+
+        except Exception as e:
+            logger.error(f"WhisperSRTWorker exception: {str(e)}", exc_info=True)
+            self.finished.emit(False, f'Lỗi: {str(e)}', None)
+
     def stop(self):
         self.should_stop = True
 
@@ -980,7 +1218,8 @@ class BatchAudioGenerationDialog(QDialog):
             story_name=self.current_story.get('name') if self.current_story else None,
             chapter_number=chapter.get('chapter_number'),
             voice_gender=voice_gender,
-            channel_intro=channel_intro
+            channel_intro=channel_intro,
+            language=self.current_story.get('language', 'vi') if self.current_story else 'vi'
         )
         self.current_worker.progress.connect(self.on_worker_progress)
         self.current_worker.finished.connect(self.on_worker_finished)
@@ -1153,7 +1392,8 @@ class BatchConversationGenerationDialog(QDialog):
             chapter_title=chapter.get('title', f"Chapter {chapter['id']}"),
             chapter_content=chapter['content'],
             story_name=self.current_story.get('name') if self.current_story else None,
-            chapter_number=chapter.get('chapter_number')
+            chapter_number=chapter.get('chapter_number'),
+            language=self.current_story.get('language', 'vi') if self.current_story else 'vi'
         )
         self.current_worker.progress.connect(self.on_worker_progress)
         self.current_worker.finished.connect(self.on_worker_finished)
@@ -1320,15 +1560,16 @@ class BatchPerplexityConversationGenerationDialog(QDialog):
             chapter_title=chapter.get('title', f"Chapter {chapter['id']}"),
             chapter_content=chapter['content'],
             story_name=self.current_story.get('name') if self.current_story else None,
-            chapter_number=chapter.get('chapter_number')
+            chapter_number=chapter.get('chapter_number'),
+            language=self.current_story.get('language', 'vi') if self.current_story else 'vi'
         )
         self.current_worker.progress.connect(self.on_worker_progress)
         self.current_worker.finished.connect(self.on_worker_finished)
         self.current_worker.start()
-    
+
     def on_worker_progress(self, message: str):
         self.status_text.append(f'[Chương {self.current_chapter_index + 1}] {message}')
-    
+
     def on_worker_finished(self, success: bool, message: str, json_path: str = None):
         """Handle worker completion"""
         chapter = self.selected_chapters[self.current_chapter_index]
@@ -1488,15 +1729,16 @@ class BatchImagePromptGenerationDialog(QDialog):
             chapter_title=chapter.get('title', f"Chapter {chapter['id']}"),
             chapter_content=chapter['content'],
             story_name=self.current_story.get('name') if self.current_story else None,
-            chapter_number=chapter.get('chapter_number')
+            chapter_number=chapter.get('chapter_number'),
+            language=self.current_story.get('language', 'vi') if self.current_story else 'vi'
         )
         self.current_worker.progress.connect(self.on_worker_progress)
         self.current_worker.finished.connect(self.on_worker_finished)
         self.current_worker.start()
-    
+
     def on_worker_progress(self, message: str):
         self.status_text.append(f'[Chương {self.current_chapter_index + 1}] {message}')
-    
+
     def on_worker_finished(self, success: bool, message: str, json_path: str = None):
         """Handle worker completion"""
         chapter = self.selected_chapters[self.current_chapter_index]
@@ -1588,6 +1830,7 @@ class BatchRunwareImageGenerationDialog(QDialog):
 • Quá trình này sẽ tạo hình ảnh tuần tự cho tất cả chương đã chọn<br>
 • Runware API sẽ được sử dụng để tạo hình ảnh từ prompts<br>
 • Nếu chưa có file JSON prompts, hệ thống sẽ tự động tạo qua Perplexity AI<br>
+• Sử dụng nội dung chapter trực tiếp (không dùng conversation JSON)<br>
 • Hình ảnh sẽ được lưu trong thư mục audio_downloads/<story_name>/images/<br>
 • Cần có RUNWARE_API_KEY trong config<br>
 • Quá trình có thể mất nhiều thời gian (3-10 phút/chương)
@@ -1653,15 +1896,16 @@ class BatchRunwareImageGenerationDialog(QDialog):
             chapter_title=chapter.get('title', f"Chapter {chapter['id']}"),
             chapter_content=chapter['content'],
             story_name=self.current_story.get('name') if self.current_story else None,
-            chapter_number=chapter.get('chapter_number')
+            chapter_number=chapter.get('chapter_number'),
+            language=self.current_story.get('language', 'vi') if self.current_story else 'vi'
         )
         self.current_worker.progress.connect(self.on_worker_progress)
         self.current_worker.finished.connect(self.on_worker_finished)
         self.current_worker.start()
-    
+
     def on_worker_progress(self, message: str):
         self.status_text.append(f'[Chương {self.current_chapter_index + 1}] {message}')
-    
+
     def on_worker_finished(self, success: bool, message: str, output_dir: str = None):
         """Handle worker completion"""
         chapter = self.selected_chapters[self.current_chapter_index]
@@ -1687,6 +1931,163 @@ class BatchRunwareImageGenerationDialog(QDialog):
         self.start_button.clicked.disconnect()
         self.start_button.clicked.connect(self.close)
     
+    def closeEvent(self, event):
+        if self.is_processing:
+            reply = QMessageBox.question(
+                self,
+                'Xác nhận',
+                'Quá trình đang chạy. Bạn có chắc muốn hủy?',
+                QMessageBox.Yes | QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                event.ignore()
+                return
+            if self.current_worker:
+                self.current_worker.stop()
+        event.accept()
+
+
+class BatchSRTGenerationDialog(QDialog):
+    """Dialog for batch SRT subtitle generation using Whisper"""
+
+    def __init__(self, parent, selected_chapters: List[Dict], current_story: Dict = None):
+        super().__init__(parent)
+        self.selected_chapters = selected_chapters
+        self.current_story = current_story
+        self.is_processing = False
+        self.current_worker = None
+        self.current_chapter_index = 0
+
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle('🎤 Tạo SRT Subtitles Tuần Tự (Whisper)')
+        self.setModal(True)
+        self.resize(700, 550)
+
+        layout = QVBoxLayout()
+
+        # Header
+        header = QLabel(f'<h3>Chương đã chọn: {len(self.selected_chapters)}</h3>')
+        layout.addWidget(header)
+
+        # Chapter list
+        list_widget = QListWidget()
+        for chapter in self.selected_chapters:
+            list_widget.addItem(f"Chương {chapter['chapter_number']}: {chapter['title']}")
+        layout.addWidget(list_widget)
+
+        # Progress bar
+        self.progress_label = QLabel('Sẵn sàng bắt đầu')
+        layout.addWidget(self.progress_label)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximum(len(self.selected_chapters))
+        layout.addWidget(self.progress_bar)
+
+        # Status text
+        self.status_text = QTextEdit()
+        self.status_text.setReadOnly(True)
+        self.status_text.setMaximumHeight(150)
+        layout.addWidget(self.status_text)
+
+        # Warning
+        warning = QLabel('''
+<b>⚠️ Lưu ý:</b><br>
+• Quá trình này sẽ tạo file SRT subtitles cho tất cả chương đã chọn<br>
+• Sử dụng OpenAI Whisper model "medium" để transcribe audio<br>
+• Cần có file audio (.wav hoặc .mp3) cho mỗi chương<br>
+• File SRT sẽ được lưu trong thư mục subtitles/<br>
+• Quá trình có thể mất 1-3 phút cho mỗi chương<br>
+• Nếu file SRT đã tồn tại, sẽ được ghi đè
+        ''')
+        warning.setWordWrap(True)
+        warning.setStyleSheet('background-color: #fff3cd; padding: 10px; border-radius: 5px;')
+        layout.addWidget(warning)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        self.start_button = QPushButton('🚀 Bắt đầu')
+        self.start_button.clicked.connect(self.start_batch_processing)
+        button_layout.addWidget(self.start_button)
+
+        cancel_button = QPushButton('❌ Hủy')
+        cancel_button.clicked.connect(self.close)
+        button_layout.addWidget(cancel_button)
+
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+
+    def start_batch_processing(self):
+        """Start processing chapters"""
+        self.is_processing = True
+        self.start_button.setEnabled(False)
+        self.progress_label.setText('Đang xử lý...')
+        self.status_text.append('🚀 Bắt đầu tạo SRT subtitles với Whisper...\n')
+
+        self.current_chapter_index = 0
+        self.process_next_chapter()
+
+    def process_next_chapter(self):
+        """Process next chapter in queue"""
+        if self.current_chapter_index >= len(self.selected_chapters):
+            self.finish_batch_processing()
+            return
+
+        chapter = self.selected_chapters[self.current_chapter_index]
+
+        # Update progress
+        self.progress_bar.setValue(self.current_chapter_index)
+        self.progress_label.setText(
+            f'Đang xử lý chương {self.current_chapter_index + 1}/{len(self.selected_chapters)}'
+        )
+        self.status_text.append(
+            f'\n🎤 Chương {chapter["chapter_number"]}: {chapter["title"]}\n'
+        )
+
+        # Start worker
+        self.current_worker = WhisperSRTWorker(
+            story_id=self.current_story.get('id') if self.current_story else None,
+            chapter_id=chapter['id'],
+            chapter_number=chapter.get('chapter_number'),
+            story_name=self.current_story.get('name') if self.current_story else None,
+            language=self.current_story.get('language', 'vi') if self.current_story else 'vi'
+        )
+        self.current_worker.progress.connect(self.on_worker_progress)
+        self.current_worker.finished.connect(self.on_worker_finished)
+        self.current_worker.start()
+
+    def on_worker_progress(self, message: str):
+        self.status_text.append(f'[Chương {self.current_chapter_index + 1}] {message}')
+
+    def on_worker_finished(self, success: bool, message: str, srt_path: str = None):
+        """Handle worker completion"""
+        chapter = self.selected_chapters[self.current_chapter_index]
+        status = '✅' if success else '❌'
+
+        log_msg = f'{status} Chương {chapter["chapter_number"]}: {message}'
+        if srt_path and success:
+            log_msg += f'\n    📁 {srt_path}'
+        self.status_text.append(log_msg + '\n')
+
+        # Move to next chapter
+        self.current_chapter_index += 1
+        QTimer.singleShot(2000, self.process_next_chapter)  # 2 second delay between chapters
+
+    def finish_batch_processing(self):
+        self.is_processing = False
+        self.progress_bar.setValue(len(self.selected_chapters))
+        self.progress_label.setText(
+            f'✅ Hoàn thành tạo SRT cho {len(self.selected_chapters)} chương!'
+        )
+        self.start_button.setText('Đóng')
+        self.start_button.setEnabled(True)
+        self.start_button.clicked.disconnect()
+        self.start_button.clicked.connect(self.close)
+
     def closeEvent(self, event):
         if self.is_processing:
             reply = QMessageBox.question(
@@ -1842,7 +2243,8 @@ class ChapterWidget(QFrame):
             story_name=self.current_story.get('name') if self.current_story else None,
             chapter_number=self.chapter.get('chapter_number'),
             voice_gender=voice_gender,
-            channel_intro=channel_intro
+            channel_intro=channel_intro,
+            language=self.current_story.get('language', 'vi') if self.current_story else 'vi'
         )
         self.worker.progress.connect(self.on_progress)
         self.worker.finished.connect(self.on_finished)
@@ -1886,7 +2288,8 @@ class ChapterWidget(QFrame):
             chapter_title=self.chapter.get('title', f"Chapter {self.chapter['id']}"),
             chapter_content=self.chapter['content'],
             story_name=self.current_story.get('name') if self.current_story else None,
-            chapter_number=self.chapter.get('chapter_number')
+            chapter_number=self.chapter.get('chapter_number'),
+            language=self.current_story.get('language', 'vi') if self.current_story else 'vi'
         )
         self.worker.progress.connect(self.on_conversation_progress)
         self.worker.finished.connect(self.on_conversation_finished)
@@ -1931,7 +2334,8 @@ class ChapterWidget(QFrame):
             chapter_title=self.chapter.get('title', f"Chapter {self.chapter['id']}"),
             chapter_content=self.chapter['content'],
             story_name=self.current_story.get('name') if self.current_story else None,
-            chapter_number=self.chapter.get('chapter_number')
+            chapter_number=self.chapter.get('chapter_number'),
+            language=self.current_story.get('language', 'vi') if self.current_story else 'vi'
         )
         self.worker.progress.connect(self.on_perplexity_conversation_progress)
         self.worker.finished.connect(self.on_perplexity_conversation_finished)
@@ -2203,7 +2607,13 @@ class MainWindow(QMainWindow):
         self.batch_runware_button.setEnabled(False)
         self.batch_runware_button.setStyleSheet('background-color: #28a745; color: white;')
         batch_controls.addWidget(self.batch_runware_button)
-        
+
+        self.batch_srt_button = QPushButton('🎤 Tạo SRT tuần tự (0)')
+        self.batch_srt_button.clicked.connect(self.batch_generate_srt)
+        self.batch_srt_button.setEnabled(False)
+        self.batch_srt_button.setStyleSheet('background-color: #fd7e14; color: white;')
+        batch_controls.addWidget(self.batch_srt_button)
+
         batch_controls.addStretch()
         right_layout.addLayout(batch_controls)
         
@@ -2287,13 +2697,19 @@ class MainWindow(QMainWindow):
         try:
             self.statusBar().showMessage('Đang tải danh sách truyện...')
             stories = self.db_service.get_stories()
-            
+
             self.story_list.clear()
             for story in stories:
-                item = QListWidgetItem(f"📖 {story['name']} - {story['author']}")
+                # Get language display
+                lang_code = story.get('language', 'vi')
+                lang_name = config.get_language_name(lang_code)
+
+                # Display format: 📖 Story Name - Author [Language]
+                author_part = f" - {story['author']}" if story.get('author') else ""
+                item = QListWidgetItem(f"📖 {story['name']}{author_part} [{lang_name}]")
                 item.setData(Qt.UserRole, story)
                 self.story_list.addItem(item)
-            
+
             self.statusBar().showMessage(f'Đã tải {len(stories)} truyện')
         except Exception as e:
             QMessageBox.critical(self, 'Lỗi', f'Không thể tải danh sách truyện:\n{str(e)}')
@@ -2329,9 +2745,12 @@ class MainWindow(QMainWindow):
             )
             
             # Update UI
+            lang_code = self.current_story.get('language', 'vi')
+            lang_name = config.get_language_name(lang_code)
+            author_part = f" - {self.current_story['author']}" if self.current_story.get('author') else ""
             self.story_info_label.setText(
-                f"📖 {self.current_story['name']} - {self.current_story['author']}\n"
-                f"Tổng số: {self.chapters_data['count']} chương"
+                f"📖 {self.current_story['name']}{author_part}\n"
+                f"🌐 Ngôn ngữ: {lang_name} | Tổng số: {self.chapters_data['count']} chương"
             )
             
             # Clear existing chapters
@@ -2408,6 +2827,8 @@ class MainWindow(QMainWindow):
         self.batch_image_prompt_button.setEnabled(selected_count > 0)
         self.batch_runware_button.setText(f'🖼️ Tạo Images tuần tự ({selected_count})')
         self.batch_runware_button.setEnabled(selected_count > 0)
+        self.batch_srt_button.setText(f'🎤 Tạo SRT tuần tự ({selected_count})')
+        self.batch_srt_button.setEnabled(selected_count > 0)
 
         # Update chapter management buttons
         # Edit button: only enable when exactly 1 chapter is selected
@@ -2523,7 +2944,27 @@ class MainWindow(QMainWindow):
         dialog.exec_()
         # Reload chapters after batch processing
         self.load_chapters()
-    
+
+    def batch_generate_srt(self):
+        """Start batch SRT subtitle generation using Whisper"""
+        selected_chapters = [
+            widget.chapter for widget in self.chapter_widgets
+            if widget.checkbox.isChecked()
+        ]
+
+        if not selected_chapters:
+            QMessageBox.warning(self, 'Cảnh báo', 'Vui lòng chọn ít nhất một chương')
+            return
+
+        dialog = BatchSRTGenerationDialog(
+            self,
+            selected_chapters,
+            current_story=self.current_story
+        )
+        dialog.exec_()
+        # Reload chapters after batch processing
+        self.load_chapters()
+
     def logout(self):
         """Handle logout"""
         reply = QMessageBox.question(

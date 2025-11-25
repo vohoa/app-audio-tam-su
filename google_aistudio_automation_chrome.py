@@ -3216,11 +3216,11 @@ class GoogleAIStudioAutomation:
                 os.makedirs(self.download_path, exist_ok=True)
                 logger.info(f"📁 Đã tạo download directory: {self.download_path}")
 
-            # Tạo tên file với định dạng <story_id>_<chapter_number>.wav
+            # Tạo tên file với định dạng <story_id>_<chapter_number>.mp3
             if output_filename:
                 filename = output_filename
             else:
-                filename = f"segment_{order_in_story}.wav"
+                filename = f"segment_{order_in_story}.mp3"
 
             filepath = os.path.join(self.download_path, filename)
 

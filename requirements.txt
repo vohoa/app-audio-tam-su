@@ -19,3 +19,6 @@ aiohttp  # For async HTTP requests
 # MoviePy for video generation
 moviepy
 imageio-ffmpeg  # FFmpeg wrapper for MoviePy
+
+# Whisper for automatic SRT generation
+openai-whisper
