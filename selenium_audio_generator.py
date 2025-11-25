@@ -413,7 +413,7 @@ class SeleniumAudioGenerator:
             # Chuẩn hóa đặc điểm giọng cho narrator
             def normalize_narrator_characteristics(characteristics, role):
                 if role.lower() == "narrator":
-                    return "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ."
+                    return "Giọng kể chuyện truyền cảm, chân thực, rõ ràng và cuốn hút dành cho người lớn. Giọng ấm áp, sâu lắng, giàu cảm xúc như đang chia sẻ câu chuyện của chính mình."
                 return characteristics
 
             action_word_1 = get_action_word(role1)
