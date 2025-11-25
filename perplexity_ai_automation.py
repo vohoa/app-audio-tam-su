@@ -1088,9 +1088,93 @@ class PerplexityAIAutomation:
         try:
             logger.info("Extracting JSON response...")
             
+            # 🔥 CRITICAL: Wait for streaming to complete FIRST
+            logger.info("⏳ Waiting for AI response streaming to complete...")
+
+            max_wait_time = 120  # Maximum 2 minutes for streaming
+            check_interval = 2  # Check every 2 seconds
+            start_wait_time = time.time()
+            last_content_length = 0
+            stable_content_count = 0
+
+            # Indicators that streaming is in progress
+            streaming_indicators = [
+                "div[class*='generating']",
+                "div[class*='streaming']",
+                "div[class*='loading']",
+                "[data-testid*='generating']",
+                "[data-testid*='streaming']",
+            ]
+
+            # Wait until content stops growing
+            while time.time() - start_wait_time < max_wait_time:
+                try:
+                    # Check if streaming indicators are present
+                    is_streaming = False
+                    for indicator in streaming_indicators:
+                        try:
+                            elements = self.driver.find_elements(By.CSS_SELECTOR, indicator)
+                            if elements and any(e.is_displayed() for e in elements):
+                                is_streaming = True
+                                logger.debug(f"🔄 Streaming indicator found: {indicator}")
+                                break
+                        except:
+                            pass
+
+                    # Get current content length from response area (more accurate than body)
+                    try:
+                        # Try to get content from code blocks specifically
+                        code_content_length = 0
+                        try:
+                            code_blocks = self.driver.find_elements(By.CSS_SELECTOR, "div.codeWrapper code, pre code")
+                            for block in code_blocks:
+                                if block.is_displayed():
+                                    text = self.driver.execute_script("return arguments[0].textContent;", block)
+                                    if text:
+                                        code_content_length += len(text)
+                        except:
+                            pass
+
+                        # Fallback to body text if no code blocks found
+                        if code_content_length == 0:
+                            code_content_length = self.driver.execute_script("return document.body.textContent.length;")
+
+                        if code_content_length == last_content_length:
+                            stable_content_count += 1
+                            logger.debug(f"📊 Content stable ({code_content_length} chars) - Stability: {stable_content_count}")
+                        else:
+                            stable_content_count = 0
+                            logger.info(f"📝 Content growing: {last_content_length} → {code_content_length} chars")
+
+                        last_content_length = code_content_length
+
+                        # For very long content (>50k chars), need more stability checks
+                        required_stability = 5 if code_content_length < 50000 else 8
+
+                        # If content has been stable for required checks AND no streaming indicators
+                        if stable_content_count >= required_stability and not is_streaming:
+                            elapsed = time.time() - start_wait_time
+                            logger.info(f"✅ Streaming complete after {elapsed:.1f}s (content stable at {code_content_length} chars, required stability: {required_stability})")
+                            break
+                    except Exception as e:
+                        logger.debug(f"Content check error: {e}")
+
+                    time.sleep(check_interval)
+
+                except Exception as e:
+                    logger.debug(f"Streaming check error: {e}")
+                    time.sleep(check_interval)
+            else:
+                elapsed = time.time() - start_wait_time
+                logger.warning(f"⚠️ Streaming wait timeout after {elapsed:.1f}s, proceeding anyway...")
+
+            # Extra wait for safety
+            logger.info("⏳ Extra 3s wait for final content render...")
+            time.sleep(3)
+
             # 🔥 CRITICAL: Scroll to bottom and wait for completion toolbar
             logger.info("🔄 Starting aggressive scrolling to load full content...")
-            
+
             # Completion indicators: Share, Export, Rewrite buttons
             completion_selectors = [
                 "button:has(div:contains('Share'))",
@@ -1098,14 +1182,14 @@ class PerplexityAIAutomation:
                 "button:has(div:contains('Rewrite'))",
                 "button[aria-label*='Copy']",  # Copy button also indicates completion
             ]
-            
+
             max_scrolls = 50  # ⬆️ Increased: Maximum 50 scrolls for long content
             max_scroll_time = 60  # ⏱️ Maximum 60 seconds for scrolling
             scroll_count = 0
             start_scroll_time = time.time()
             last_scroll_height = 0
             stable_scroll_count = 0  # Count how many times scroll height stayed the same
-            
+
             logger.info(f"📊 Scroll limits: {max_scrolls} scrolls or {max_scroll_time}s timeout")
             
             while scroll_count < max_scrolls:
@@ -1199,67 +1283,158 @@ class PerplexityAIAutomation:
             # 🔥 CRITICAL: Additional scroll inside code blocks to ensure full JSON content
             logger.info("🔄 Scrolling inside code blocks to load full JSON content...")
             try:
-                # Find all code blocks
-                code_blocks = self.driver.find_elements(By.CSS_SELECTOR, "div[class*='codeWrapper'], pre.not-prose, div[id^='markdown-content-'] pre")
-                logger.info(f"Found {len(code_blocks)} code blocks to scroll")
-                
-                for idx, block in enumerate(code_blocks):
+                # Multiple selectors to find code blocks
+                code_block_selectors = [
+                    "div[class*='codeWrapper']",
+                    "pre.not-prose",
+                    "div[id^='markdown-content-'] pre",
+                    "pre code",
+                    "div.codeWrapper",
+                ]
+
+                all_code_blocks = []
+                for selector in code_block_selectors:
+                    try:
+                        blocks = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                        all_code_blocks.extend(blocks)
+                    except Exception as e:
+                        logger.debug(f"Error finding blocks with selector {selector}: {e}")
+
+                # Remove duplicates by comparing element IDs
+                unique_blocks = []
+                seen_ids = set()
+                for block in all_code_blocks:
+                    try:
+                        element_id = self.driver.execute_script("return arguments[0].getAttribute('data-element-id') || arguments[0].outerHTML.substring(0, 100);", block)
+                        if element_id not in seen_ids:
+                            seen_ids.add(element_id)
+                            unique_blocks.append(block)
+                    except:
+                        unique_blocks.append(block)
+
+                logger.info(f"Found {len(unique_blocks)} unique code blocks to scroll")
+
+                for idx, block in enumerate(unique_blocks):
                     try:
                         if not block.is_displayed():
                             continue
-                        
-                        # Scroll window to bring code block into view
-                        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", block)
-                        time.sleep(0.3)
-                        
+
+                        # Scroll window to bring code block into view - wait longer for render
+                        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center', behavior: 'smooth'});", block)
+                        time.sleep(0.8)  # ⬆️ Increased wait time for render
+
+                        # Try to expand any collapsed content
+                        try:
+                            # Click any "expand" or "show more" buttons
+                            expand_buttons = block.find_elements(By.XPATH, ".//button[contains(., 'expand') or contains(., 'more') or contains(., 'Show')]")
+                            for btn in expand_buttons:
+                                if btn.is_displayed():
+                                    btn.click()
+                                    time.sleep(0.5)
+                                    logger.info(f"✓ Clicked expand button in code block {idx+1}")
+                        except:
+                            pass
+
                         # Get scroll height of code block
                         block_scroll_height = self.driver.execute_script("return arguments[0].scrollHeight;", block)
                         block_client_height = self.driver.execute_script("return arguments[0].clientHeight;", block)
-                        
+
                         logger.debug(f"Code block {idx+1}: scrollHeight={block_scroll_height}px, clientHeight={block_client_height}px")
-                        
+
                         # If code block has scrollable content, scroll it
                         if block_scroll_height > block_client_height:
-                            logger.info(f"📜 Code block {idx+1} is scrollable, scrolling to bottom...")
-                            
+                            scroll_ratio = block_scroll_height / block_client_height
+                            logger.info(f"📜 Code block {idx+1} is scrollable (ratio: {scroll_ratio:.1f}x), scrolling to bottom...")
+
+                            # For very long code blocks, increase max scrolls
+                            max_scroll_attempts = 15 if scroll_ratio < 10 else 30
+                            logger.debug(f"Using max {max_scroll_attempts} scroll attempts for this block")
+
                             # Scroll inside the code block multiple times to ensure full load
-                            for scroll_attempt in range(10):  # Max 10 scrolls per block
+                            consecutive_stable = 0
+                            for scroll_attempt in range(max_scroll_attempts):
                                 current_scroll = self.driver.execute_script("return arguments[0].scrollTop;", block)
-                                
+
                                 # Scroll down inside the block
                                 self.driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight;", block)
-                                time.sleep(0.3)
-                                
+                                time.sleep(0.6)  # ⬆️ Increased wait time for lazy-load
+
                                 new_scroll = self.driver.execute_script("return arguments[0].scrollTop;", block)
-                                
+
                                 # If scroll position didn't change, we're at bottom
                                 if new_scroll == current_scroll:
-                                    logger.debug(f"   Scroll attempt {scroll_attempt+1}: Reached bottom at {new_scroll}px")
-                                    break
+                                    consecutive_stable += 1
+                                    logger.debug(f"   Scroll attempt {scroll_attempt+1}: Stable at {new_scroll}px (stability: {consecutive_stable})")
+
+                                    # Need 3 consecutive stable readings to be sure
+                                    if consecutive_stable >= 3:
+                                        logger.debug(f"   Confirmed at bottom after {consecutive_stable} stable readings")
+                                        # Do 3 more extra scrolls to be absolutely sure
+                                        for _ in range(3):
+                                            self.driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight;", block)
+                                            time.sleep(0.4)
+                                        break
                                 else:
+                                    consecutive_stable = 0  # Reset stability counter
                                     logger.debug(f"   Scroll attempt {scroll_attempt+1}: {current_scroll}px → {new_scroll}px")
-                            
-                            logger.info(f"✓ Code block {idx+1} scrolled to bottom")
+
+                            logger.info(f"✓ Code block {idx+1} scrolled to bottom ({scroll_attempt+1} attempts)")
                         else:
-                            logger.debug(f"Code block {idx+1} is not scrollable")
-                            
+                            logger.debug(f"Code block {idx+1} is not scrollable (or fully visible)")
+
                     except Exception as block_error:
                         logger.debug(f"Error scrolling code block {idx+1}: {block_error}")
-                
+
                 logger.info("✅ Code block scrolling completed")
-                
+
             except Exception as scroll_error:
                 logger.warning(f"Error during code block scrolling: {scroll_error}")
-            
-            # Wait a bit for content to fully render after scrolling
-            time.sleep(2)
-            
-            # Get text from DOM
-            json_text = self.get_response_text_from_dom()
-            
+
+            # 🔥 NEW: Force a final page scroll to trigger any lazy-loaded content
+            logger.info("🔄 Final aggressive page scroll to trigger lazy-load...")
+            try:
+                for _ in range(3):
+                    self.driver.execute_script("window.scrollTo(0, 0);")  # Scroll to top
+                    time.sleep(0.5)
+                    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # Scroll to bottom
+                    time.sleep(0.8)
+                logger.info("✅ Final page scroll completed")
+            except Exception as e:
+                logger.debug(f"Final scroll error: {e}")
+
+            # Wait a bit longer for content to fully render after scrolling
+            logger.info("⏳ Waiting for content to fully render...")
+            time.sleep(3)  # ⬆️ Increased from 2 to 3 seconds
+
+            # 🔥 NEW: Verify JSON completeness by checking content length multiple times
+            logger.info("🔍 Verifying JSON content completeness...")
+            json_text = None
+            last_text_length = 0
+            stable_reads = 0
+
+            for verify_attempt in range(5):  # Try up to 5 times
+                json_text = self.get_response_text_from_dom()
+
+                if json_text:
+                    current_length = len(json_text)
+                    logger.debug(f"Verification read {verify_attempt+1}: {current_length} chars")
+
+                    if current_length == last_text_length and current_length > 0:
+                        stable_reads += 1
+                        if stable_reads >= 2:
+                            logger.info(f"✓ JSON content verified stable at {current_length} chars")
+                            break
+                    else:
+                        stable_reads = 0
+                        last_text_length = current_length
+                        logger.info(f"⚠️ Content still growing, waiting more... ({current_length} chars)")
+                        time.sleep(2)  # Wait before next read
+
             if not json_text:
-                logger.error("❌ Could not get response text")
+                logger.error("❌ Could not get response text after verification attempts")
                 return None
+
+            logger.info(f"📄 Final JSON text length: {len(json_text)} chars")
             
             # Parse JSON
             try:

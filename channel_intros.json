@@ -38,7 +38,7 @@
     },
     {
       "name": "Không Lời Mở Đầu",
-      "content": ""
+      "content": "{story_name}, chương {chapter_title}"
     }
   ]
 }
