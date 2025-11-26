@@ -16,26 +16,58 @@ Trả về **ĐÚNG VÀ CHỈ JSON** hợp lệ trong khối code, theo cấu tr
   "speakers": [
     {
       "speaker_id": 1,
-      "name": "tên nhân vật hoặc rỗng",
-      "age_category": "child|young_adult|middle_aged|elderly",
-      "gender": "male|female|unknown",
-      "role": "child|parent|grandparent|teacher|authority|neutral|narrator",
-      "dialogue": "[NGUYÊN VĂN ĐẦY ĐỦ - giữ mọi dấu câu và xuống dòng]",
+      "name": "Người dẫn truyện",
+      "age_category": "adult",
+      "gender": "female",
+      "role": "narrator",
+      "dialogue": "[Đoạn dẫn truyện nguyên văn đầy đủ]",
       "context": "mô tả ngắn tình huống",
-      "emotion": "vui|buồn|tức giận|lo lắng|bình thường|hào hứng|tường thuật",
+      "emotion": "tường thuật",
       "order_in_story": 1,
-      "voice": "tên-giọng-đọc-từ-danh-sách",
+      "voice": "aoede",
+      "characteristics": "Giọng kể chuyện nhẹ nhàng, thoải mái, rõ ràng"
+    },
+    {
+      "speaker_id": 2,
+      "name": "tên nhân vật",
+      "age_category": "child|young_adult|middle_aged|elderly",
+      "gender": "male|female",
+      "role": "child|parent|grandparent|teacher|authority|neutral",
+      "dialogue": "[Lời thoại nguyên văn đầy đủ]",
+      "context": "mô tả ngắn tình huống",
+      "emotion": "vui|buồn|tức giận|lo lắng|bình thường|hào hứng",
+      "order_in_story": 2,
+      "voice": "tên-giọng-phù-hợp-với-nhân-vật",
       "characteristics": "mô tả chất giọng và phong thái"
+    },
+    {
+      "speaker_id": 1,
+      "name": "Người dẫn truyện",
+      "age_category": "adult",
+      "gender": "female",
+      "role": "narrator",
+      "dialogue": "[Đoạn dẫn truyện tiếp theo]",
+      "context": "mô tả tình huống",
+      "emotion": "tường thuật",
+      "order_in_story": 3,
+      "voice": "aoede",
+      "characteristics": "Giọng kể chuyện nhẹ nhàng, thoải mái, rõ ràng"
     }
   ]
 }
 ```
 
+**LƯU Ý QUAN TRỌNG:**
+- Tất cả đoạn narrator PHẢI có `speaker_id = 1`, `voice = "aoede"`, `gender = "female"`, `role = "narrator"`
+- Đảm bảo narrator xuất hiện nhất quán xuyên suốt với cùng một giọng nữ (aoede)
+
 ===QUY TẮC XỬ LÝ - ĐỌC KỸ===
 
 **1. Phân biệt loại nội dung:**
 *   **LỜI THOẠI**: Là các đoạn nằm trong dấu ngoặc kép ("...") hoặc đi kèm các động từ như "nói", "hỏi", "đáp", "quát", "thì thầm".
-*   **DẪN TRUYỆN**: Mọi phần còn lại (miêu tả, tường thuật, hành động, suy nghĩ). Gán `role = "narrator"`, `emotion = "tường thuật"`, và `voice = "schedar"`.
+*   **DẪN TRUYỆN**: Mọi phần còn lại (miêu tả, tường thuật, hành động, suy nghĩ).
+    *   Gán `role = "narrator"`, `emotion = "tường thuật"`, `gender = "female"`
+    *   **QUAN TRỌNG**: `voice = "aoede"` (giọng nữ) cho TẤT CẢ đoạn dẫn truyện - PHẢI THỐNG NHẤT từ đầu đến cuối, KHÔNG được thay đổi hoặc chen lẫn giọng khác.
 
 **2. Thứ tự và tách biệt:**
 *   Đánh số `order_in_story` tăng dần từ 1.
@@ -44,30 +76,39 @@ Trả về **ĐÚNG VÀ CHỈ JSON** hợp lệ trong khối code, theo cấu tr
 *   Xử lý tuần tự từ đầu đến cuối văn bản.
 
 **3. Chọn giọng đọc (Trường `voice`):**
-Chỉ chọn MỘT giọng từ danh sách của Gemini API dưới đây, dựa trên `gender` và `age_category`.[6][7]
+Chỉ chọn MỘT giọng từ danh sách của Gemini API dưới đây, dựa trên `gender` và `age_category`.
 
-*   **Dẫn truyện (Nam/Nữ - Trung tính, rõ ràng)**:
-    *   **schedar**: Giọng nữ trung tính, đều đặn (khuyến khích cho dẫn truyện).[6]
-    *   **zubenelgenubi**: Giọng nam trung tính, bình thường.[6]
+*   **Dẫn truyện (Giọng trung tính, rõ ràng)**:
+    *   **aoede**: Giọng nữ, nhẹ nhàng, thoải mái (Breezy) - KHUYẾN KHÍCH cho narrator nữ.
+    *   **vindemiatrix**: Giọng nữ, êm dịu, nhẹ nhàng - phù hợp narrator nữ.
+    *   **schedar**: Giọng nam, đều đặn (Even) - phù hợp narrator nam.
+    *   **zubenelgenubi**: Giọng nam, thoải mái (Casual) - phù hợp narrator nam.
+    *   **algieba**: Giọng nam, mượt mà (Smooth).
 *   **Giọng Nữ**:
-    *   **sulafat**: Ấm áp, thân thiện (phù hợp vai mẹ, cô giáo).[6]
-    *   **vindemiatrix**: Êm dịu, nhẹ nhàng.[6]
-    *   **sadachbia**: Sôi nổi, hoạt bát (phù hợp nhân vật trẻ, năng động).[6]
+    *   **sulafat**: Ấm áp (Warm) - phù hợp vai mẹ, cô giáo.
+    *   **sadachbia**: Sôi nổi, hoạt bát.
+    *   **autonoe**: Tươi sáng (Bright).
+    *   **leda**: Trẻ trung (Youthful) - giọng nữ trẻ.
 *   **Giọng Nam**:
-    *   **gacrux**: Trưởng thành, đĩnh đạc (phù hợp vai cha, người lớn tuổi).[6]
-    *   **rasalgethi**: Trầm, ấm (có thể dùng cho vai ông, hoặc nhân vật có chiều sâu).[6]
-*   **Giọng Trẻ em (Nam/Nữ)**:
-    *   **puck**: Giọng nam trẻ, tinh nghịch.[6]
-    *   **leda**: Giọng nữ trẻ.[6]
-*   **Các giọng khác để lựa chọn**:
-    *   *Thân thiện/Mềm mại*: achird, aoede, autonoe.[6]
-    *   *Mạnh mẽ/Chắc chắn*: alnilam, erinome, fenrir.[6]
+    *   **gacrux**: Trưởng thành (Mature) - phù hợp vai cha, người lớn tuổi.
+    *   **rasalgethi**: Mang tính thông tin (Informative) - phù hợp vai học giả, người có chiều sâu.
+    *   **charon**: Chắc chắn, có quyền uy.
+    *   **fenrir**: Mạnh mẽ, kiên định.
+    *   **zephyr**: Tươi sáng (Bright) - giọng nam trẻ.
+    *   **puck**: Sôi nổi (Upbeat) - giọng nam trẻ, năng động.
+*   **Các giọng khác**:
+    *   **kore**: Quyết đoán (Firm) - phù hợp vai nữ có quyền uy.
+    *   **alnilam**: Kiên định (Firm) - phù hợp vai nam có quyền uy.
+    *   **enceladus**: Thì thầm (Breathy).
 
 **4. Metadata:**
-*   **name**: Điền tên nhân vật nếu có. Nếu không, để rỗng hoặc ghi vai vế (ví dụ: Mẹ, Ông lão).
+*   **name**: Điền tên nhân vật nếu có. Nếu không, để rỗng hoặc ghi vai vế (ví dụ: Mẹ, Ông lão). Với narrator, để rỗng hoặc ghi "Người dẫn truyện".
 *   **context**: Tóm tắt 1 câu về tình huống (ví dụ: An ủi con gái, Ra lệnh cho lính).
 *   **emotion**: Chọn một nhãn cảm xúc phù hợp. Dẫn truyện luôn là "tường thuật".
-*   **characteristics**: Mô tả thêm về giọng điệu mong muốn để AI diễn đạt tốt hơn, ví dụ: thì thầm và lo lắng, gằn giọng một cách giận dữ, nói nhanh và hào hứng.[7]
+*   **characteristics**: Mô tả thêm về giọng điệu mong muốn để AI diễn đạt tốt hơn, ví dụ: thì thầm và lo lắng, gằn giọng một cách giận dữ, nói nhanh và hào hứng.
+*   **voice**:
+    *   Narrator: BẮT BUỘC dùng `"aoede"` (giọng nữ) cho TẤT CẢ đoạn dẫn truyện (đảm bảo tính thống nhất).
+    *   Nhân vật: Chọn voice phù hợp với gender và age_category từ danh sách trên.
 
 Không giải thích, không ví dụ, không chú thích - **CHỈ TRẢ VỀ JSON** trong khối code.
 

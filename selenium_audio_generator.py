@@ -267,7 +267,7 @@ class SeleniumAudioGenerator:
     # Cache Management Methods
     # ============================================
     
-    def _get_cache_path(self, story_name: str, story_id: int, chapter_number: int) -> str:
+    def _get_cache_path(self, story_name: str, story_id: int, chapter_number: int, language: str = 'vi') -> str:
         """
         Get cache file path for speaker analysis (stored in story's conversations folder)
 
@@ -275,20 +275,22 @@ class SeleniumAudioGenerator:
             story_name: Tên story
             story_id: ID story
             chapter_number: Số chương
+            language: Mã ngôn ngữ (vi, en, ja, etc.)
 
         Returns:
-            Path to cache file in audio_downloads/<story_name>/conversations/
+            Path to cache file in audio_downloads/<language>/<story_name>/conversations/
         """
         # Convert story name to slug
         story_folder = convert_to_slug(story_name)
 
-        # Use story's conversations directory for cache
-        cache_dir = os.path.join(self.download_path, story_folder, 'conversations')
+        # Use story's conversations directory for cache with language structure
+        lang_folder = os.path.join(self.download_path, language)
+        cache_dir = os.path.join(lang_folder, story_folder, 'conversations')
         os.makedirs(cache_dir, exist_ok=True)
         cache_filename = f"{story_id}_{chapter_number}.json"
         return os.path.join(cache_dir, cache_filename)
     
-    def _get_cached_analysis(self, story_name: str, story_id: int, chapter_number: int) -> Optional[Dict]:
+    def _get_cached_analysis(self, story_name: str, story_id: int, chapter_number: int, language: str = 'vi') -> Optional[Dict]:
         """
         Load cached speaker analysis from story's conversations folder if exists
 
@@ -296,12 +298,13 @@ class SeleniumAudioGenerator:
             story_name: Tên story
             story_id: ID của story
             chapter_number: Số thứ tự chương
+            language: Mã ngôn ngữ (vi, en, ja, etc.)
 
         Returns:
             Dict chứa analysis results hoặc None
         """
         try:
-            cache_path = self._get_cache_path(story_name, story_id, chapter_number)
+            cache_path = self._get_cache_path(story_name, story_id, chapter_number, language)
 
             if os.path.exists(cache_path):
                 with open(cache_path, 'r', encoding='utf-8') as f:
@@ -316,7 +319,7 @@ class SeleniumAudioGenerator:
             logger.warning(f"Failed to load cache: {e}")
             return None
     
-    def _save_cached_analysis(self, story_name: str, story_id: int, chapter_number: int, analysis: Dict):
+    def _save_cached_analysis(self, story_name: str, story_id: int, chapter_number: int, analysis: Dict, language: str = 'vi'):
         """
         Save speaker analysis to cache in story's conversations folder
 
@@ -325,9 +328,10 @@ class SeleniumAudioGenerator:
             story_id: ID của story
             chapter_number: Số thứ tự chương
             analysis: Analysis results to cache
+            language: Mã ngôn ngữ (vi, en, ja, etc.)
         """
         try:
-            cache_path = self._get_cache_path(story_name, story_id, chapter_number)
+            cache_path = self._get_cache_path(story_name, story_id, chapter_number, language)
 
             with open(cache_path, 'w', encoding='utf-8') as f:
                 json.dump(analysis, f, ensure_ascii=False, indent=2)
@@ -341,7 +345,7 @@ class SeleniumAudioGenerator:
     # Speaker Analysis Methods
     # ============================================
     
-    def _analyze_speakers(self, chapter_content: str, story_name: str, story_id: int, chapter_number: int) -> Dict:
+    def _analyze_speakers(self, chapter_content: str, story_name: str, story_id: int, chapter_number: int, language: str = 'vi') -> Dict:
         """
         Analyze speakers in chapter content using AI
 
@@ -350,12 +354,13 @@ class SeleniumAudioGenerator:
             story_name: Tên story
             story_id: ID của story
             chapter_number: Số thứ tự chương
+            language: Mã ngôn ngữ (vi, en, ja, etc.)
 
         Returns:
             Dict chứa speaker analysis
         """
         # Check cache first
-        cached = self._get_cached_analysis(story_name, story_id, chapter_number)
+        cached = self._get_cached_analysis(story_name, story_id, chapter_number, language)
         if cached:
             return cached
 
@@ -372,7 +377,7 @@ class SeleniumAudioGenerator:
                 analysis = analyzer.create_analysis_prompt(chapter_content)
 
             # Save to cache
-            self._save_cached_analysis(story_name, story_id, chapter_number, analysis)
+            self._save_cached_analysis(story_name, story_id, chapter_number, analysis, language)
             
             speakers_count = len(analysis.get('speakers', []))
             
@@ -749,7 +754,7 @@ class SeleniumAudioGenerator:
             # ============================================
             # ADVANCED MODE: Segment-based generation
             # ============================================
-            cache = self._get_cached_analysis(story_name=story_name, story_id=story_id, chapter_number=chapter_number)
+            cache = self._get_cached_analysis(story_name=story_name, story_id=story_id, chapter_number=chapter_number, language=language)
             if cache is None:
                 with LogBlock(logger, "Generate full chapter audio (no cache)"):
                     # Map voice_gender to voice_name
@@ -778,7 +783,7 @@ class SeleniumAudioGenerator:
                     if word_count <= MAX_CHUNK_SIZE:
                         logger.info("✅ Content fits in single chunk, generating directly...")
                         narrator_prompt = (
-                            "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ.\n"
+                            "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người trưởng thành. Giọng ấm áp, gần gũi, thấu hiểu những câu chuyện tình yêu và tâm sự của người lớn tuổi 18+.\n"
                             f"Speaker 1: {full_content}"
                         )
 
@@ -802,7 +807,7 @@ class SeleniumAudioGenerator:
                             logger.info(f"🎯 Generating chunk {idx}/{len(chunks)} ({chunk_word_count} words)...")
 
                             chunk_prompt = (
-                                "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ.\n"
+                                "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người trưởng thành. Giọng ấm áp, gần gũi, thấu hiểu những câu chuyện tình yêu và tâm sự của người lớn tuổi 18+.\n"
                                 f"Speaker 1: {chunk_text}"
                             )
 
@@ -882,7 +887,8 @@ class SeleniumAudioGenerator:
                         chapter_content=chapter_content,
                         story_name=story_name,
                         story_id=story_id or 0,
-                        chapter_number=chapter_num
+                        chapter_number=chapter_num,
+                        language=language
                     )
                 
                 speakers = analysis.get('speakers', [])
@@ -980,7 +986,7 @@ class SeleniumAudioGenerator:
                 if word_count <= MAX_CHUNK_SIZE:
                     logger.info("✅ Content fits in single chunk, generating directly...")
                     narrator_prompt = (
-                        "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ.\n"
+                        "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người trưởng thành. Giọng ấm áp, gần gũi, thấu hiểu những câu chuyện tình yêu và tâm sự của người lớn tuổi 18+.\n"
                         f"Speaker 1: {full_content}"
                     )
 
@@ -1005,7 +1011,7 @@ class SeleniumAudioGenerator:
                         logger.info(f"🎯 Generating chunk {idx}/{len(chunks)} ({chunk_word_count} words)...")
 
                         chunk_prompt = (
-                            "Giọng kể chuyện vui tươi, sinh động, rõ ràng và dễ hiểu dành cho trẻ em. Giọng ấm áp, thân thiện như cô giáo đang kể chuyện cho các em nhỏ.\n"
+                            "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người trưởng thành. Giọng ấm áp, gần gũi, thấu hiểu những câu chuyện tình yêu và tâm sự của người lớn tuổi 18+.\n"
                             f"Speaker 1: {chunk_text}"
                         )
 
