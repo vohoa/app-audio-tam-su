@@ -171,17 +171,17 @@ class SeleniumAudioGenerator:
             voice_gender: 'male' or 'female'
 
         Returns:
-            Voice name string (e.g., 'Charon', 'Leda')
+            Voice name string (e.g., 'Charon', 'Aoede')
         """
         # Voice mapping based on Google Chirp 3 HD voices
         # Male voices: Puck, Charon, Fenrir, Orus
-        # Female voices: Aoede, Kore, Leda, Leda
+        # Female voices: Aoede, Kore, Aoede, Aoede
         # Extended voices: Puck, Kochab, Pavo, etc. (gender varies)
         voice_map = {
             'male': 'Puck',    # Male voice (deep, mature)
-            'female': 'Leda'   # Female voice (clear, expressive)
+            'female': 'Aoede'   # Female voice (clear, expressive)
         }
-        return voice_map.get(voice_gender.lower(), 'Leda')
+        return voice_map.get(voice_gender.lower(), 'Aoede')
 
     def _get_fallback_profile(self) -> str:
         """
@@ -783,7 +783,7 @@ class SeleniumAudioGenerator:
                     if word_count <= MAX_CHUNK_SIZE:
                         logger.info("✅ Content fits in single chunk, generating directly...")
                         narrator_prompt = (
-                            "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người trưởng thành. Giọng ấm áp, gần gũi, thấu hiểu những câu chuyện tình yêu và tâm sự của người lớn tuổi 18+.\n"
+                            "Giọng kể chuyện nhẹ nhàng, thoải mái, rõ ràng.\n"
                             f"Speaker 1: {full_content}"
                         )
 
@@ -807,7 +807,7 @@ class SeleniumAudioGenerator:
                             logger.info(f"🎯 Generating chunk {idx}/{len(chunks)} ({chunk_word_count} words)...")
 
                             chunk_prompt = (
-                                "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người trưởng thành. Giọng ấm áp, gần gũi, thấu hiểu những câu chuyện tình yêu và tâm sự của người lớn tuổi 18+.\n"
+                                "Giọng kể chuyện nhẹ nhàng, thoải mái, rõ ràng.\n"
                                 f"Speaker 1: {chunk_text}"
                             )
 
@@ -986,7 +986,7 @@ class SeleniumAudioGenerator:
                 if word_count <= MAX_CHUNK_SIZE:
                     logger.info("✅ Content fits in single chunk, generating directly...")
                     narrator_prompt = (
-                        "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người trưởng thành. Giọng ấm áp, gần gũi, thấu hiểu những câu chuyện tình yêu và tâm sự của người lớn tuổi 18+.\n"
+                        "Giọng kể chuyện nhẹ nhàng, thoải mái, rõ ràng.\n"
                         f"Speaker 1: {full_content}"
                     )
 
@@ -1011,7 +1011,7 @@ class SeleniumAudioGenerator:
                         logger.info(f"🎯 Generating chunk {idx}/{len(chunks)} ({chunk_word_count} words)...")
 
                         chunk_prompt = (
-                            "Giọng kể chuyện sâu lắng, chân thành và đầy cảm xúc dành cho người trưởng thành. Giọng ấm áp, gần gũi, thấu hiểu những câu chuyện tình yêu và tâm sự của người lớn tuổi 18+.\n"
+                            "Giọng kể chuyện nhẹ nhàng, thoải mái, rõ ràng.\n"
                             f"Speaker 1: {chunk_text}"
                         )
 

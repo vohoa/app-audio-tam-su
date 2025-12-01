@@ -7,6 +7,8 @@ import os
 import re
 import json
 import logging
+import random
+import numpy as np
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 from difflib import SequenceMatcher
@@ -35,13 +37,166 @@ class VideoGenerator:
     """
     Class để tạo video từ danh sách ảnh và file audio
     """
-    
+
     def __init__(self):
         """Khởi tạo VideoGenerator"""
         if ImageClip is None or AudioFileClip is None:
             raise ImportError("MoviePy chưa được cài đặt. Chạy: pip install moviepy imageio-ffmpeg")
-        
+
         logger.info("✓ VideoGenerator initialized")
+
+    def apply_ken_burns_effect(self, clip, duration: float, effect_type: str = 'random'):
+        """
+        Áp dụng Ken Burns effect (Pan/Zoom) cho image clip
+
+        Args:
+            clip: ImageClip object
+            duration: Thời gian của clip (giây)
+            effect_type: Loại hiệu ứng ('random', 'zoom_in', 'zoom_out', 'pan_left',
+                        'pan_right', 'pan_up', 'pan_down', 'zoom_in_pan', 'zoom_out_pan')
+
+        Returns:
+            Clip đã có hiệu ứng Pan/Zoom
+        """
+        try:
+            # Nếu random, chọn ngẫu nhiên một hiệu ứng
+            if effect_type == 'random':
+                effects = [
+                    'zoom_in', 'zoom_out', 'pan_left', 'pan_right',
+                    'pan_up', 'pan_down', 'zoom_in_pan', 'zoom_out_pan'
+                ]
+                effect_type = random.choice(effects)
+
+            # Lấy kích thước ảnh gốc
+            w, h = clip.size
+
+            # Định nghĩa zoom và pan parameters - CHỌN MỘT LẦN DUY NHẤT NGOÀI make_frame
+            zoom_start = 1.0
+            zoom_end = 1.0
+            pan_x_start = 0
+            pan_x_end = 0
+            pan_y_start = 0
+            pan_y_end = 0
+
+            # Cấu hình theo loại hiệu ứng
+            if effect_type == 'zoom_in':
+                zoom_start = 1.0
+                zoom_end = 1.3  # Zoom in 30%
+
+            elif effect_type == 'zoom_out':
+                zoom_start = 1.3
+                zoom_end = 1.0  # Zoom out từ 130% về 100%
+
+            elif effect_type == 'pan_left':
+                zoom_start = zoom_end = 1.2
+                pan_x_start = 0
+                pan_x_end = -int(w * 0.2)  # Pan sang trái 20%
+
+            elif effect_type == 'pan_right':
+                zoom_start = zoom_end = 1.2
+                pan_x_start = 0
+                pan_x_end = int(w * 0.2)  # Pan sang phải 20%
+
+            elif effect_type == 'pan_up':
+                zoom_start = zoom_end = 1.2
+                pan_y_start = 0
+                pan_y_end = -int(h * 0.2)  # Pan lên trên 20%
+
+            elif effect_type == 'pan_down':
+                zoom_start = zoom_end = 1.2
+                pan_y_start = 0
+                pan_y_end = int(h * 0.2)  # Pan xuống dưới 20%
+
+            elif effect_type == 'zoom_in_pan':
+                zoom_start = 1.0
+                zoom_end = 1.3
+                # Random pan direction - CHỌN MỘT LẦN DUY NHẤT
+                pan_direction = random.choice(['left', 'right', 'up', 'down'])
+                if pan_direction == 'left':
+                    pan_x_end = -int(w * 0.15)
+                elif pan_direction == 'right':
+                    pan_x_end = int(w * 0.15)
+                elif pan_direction == 'up':
+                    pan_y_end = -int(h * 0.15)
+                else:  # down
+                    pan_y_end = int(h * 0.15)
+
+            elif effect_type == 'zoom_out_pan':
+                zoom_start = 1.3
+                zoom_end = 1.0
+                # Random pan direction - CHỌN MỘT LẦN DUY NHẤT
+                pan_direction = random.choice(['left', 'right', 'up', 'down'])
+                if pan_direction == 'left':
+                    pan_x_start = -int(w * 0.15)
+                elif pan_direction == 'right':
+                    pan_x_start = int(w * 0.15)
+                elif pan_direction == 'up':
+                    pan_y_start = -int(h * 0.15)
+                else:  # down
+                    pan_y_start = int(h * 0.15)
+
+            # Tạo hàm resize động theo thời gian
+            def make_frame(t):
+                """Tạo frame tại thời điểm t"""
+                # Tính tỷ lệ thời gian (0.0 -> 1.0)
+                progress = t / duration if duration > 0 else 0
+
+                # Interpolate zoom và pan (sử dụng giá trị đã định nghĩa bên ngoài)
+                current_zoom = zoom_start + (zoom_end - zoom_start) * progress
+                current_pan_x = pan_x_start + (pan_x_end - pan_x_start) * progress
+                current_pan_y = pan_y_start + (pan_y_end - pan_y_start) * progress
+
+                # Lấy frame gốc
+                frame = clip.get_frame(t)
+
+                # Áp dụng zoom bằng cách resize
+                if current_zoom != 1.0:
+                    from PIL import Image
+                    pil_img = Image.fromarray(frame)
+                    new_w = int(w * current_zoom)
+                    new_h = int(h * current_zoom)
+                    pil_img = pil_img.resize((new_w, new_h), Image.LANCZOS)
+                    frame = np.array(pil_img)
+
+                # Áp dụng pan bằng cách crop
+                crop_w, crop_h = frame.shape[1], frame.shape[0]
+                center_x = crop_w // 2 + int(current_pan_x)
+                center_y = crop_h // 2 + int(current_pan_y)
+
+                # Đảm bảo không vượt quá biên
+                x1 = max(0, center_x - w // 2)
+                y1 = max(0, center_y - h // 2)
+                x2 = min(crop_w, x1 + w)
+                y2 = min(crop_h, y1 + h)
+
+                # Điều chỉnh nếu crop nhỏ hơn kích thước mong muốn
+                if x2 - x1 < w:
+                    x1 = max(0, x2 - w)
+                if y2 - y1 < h:
+                    y1 = max(0, y2 - h)
+
+                cropped = frame[y1:y2, x1:x2]
+
+                # Resize về kích thước gốc nếu cần
+                if cropped.shape[1] != w or cropped.shape[0] != h:
+                    from PIL import Image
+                    pil_img = Image.fromarray(cropped)
+                    pil_img = pil_img.resize((w, h), Image.LANCZOS)
+                    cropped = np.array(pil_img)
+
+                return cropped
+
+            # Tạo VideoClip từ hàm make_frame
+            from moviepy.video.VideoClip import VideoClip
+            animated_clip = VideoClip(make_frame, duration=duration)
+            animated_clip.fps = 24
+
+            logger.debug(f"Applied Ken Burns effect: {effect_type}")
+            return animated_clip
+
+        except Exception as e:
+            logger.warning(f"Could not apply Ken Burns effect: {e}, using static image")
+            return clip
 
     def parse_srt_file(self, srt_path: str) -> List[Dict[str, Any]]:
         """
@@ -639,7 +794,9 @@ class VideoGenerator:
                                  output_path: str,
                                  fps: int = 1,
                                  transition_duration: float = 0.5,
-                                 image_durations: List[float] = None) -> Dict[str, Any]:
+                                 image_durations: List[float] = None,
+                                 enable_ken_burns: bool = True,
+                                 ken_burns_effect: str = 'random') -> Dict[str, Any]:
         """
         Tạo video từ danh sách ảnh và audio
 
@@ -650,6 +807,9 @@ class VideoGenerator:
             fps: Frames per second (1 = mỗi ảnh hiển thị 1 giây)
             transition_duration: Thời gian chuyển cảnh (giây)
             image_durations: Danh sách duration riêng cho mỗi ảnh (None = chia đều)
+            enable_ken_burns: Bật/tắt hiệu ứng Pan/Zoom (Ken Burns)
+            ken_burns_effect: Loại hiệu ứng ('random', 'zoom_in', 'zoom_out', 'pan_left',
+                             'pan_right', 'pan_up', 'pan_down', 'zoom_in_pan', 'zoom_out_pan')
 
         Returns:
             Dict với thông tin kết quả
@@ -681,6 +841,12 @@ class VideoGenerator:
                 duration_per_image = total_audio_duration / len(image_paths)
                 logger.info(f"Duration per image: {duration_per_image:.2f}s (equal distribution)")
 
+            # Log Ken Burns effect status
+            if enable_ken_burns:
+                logger.info(f"🎬 Ken Burns effect enabled: {ken_burns_effect}")
+            else:
+                logger.info("📷 Static images (no Ken Burns effect)")
+
             # Create image clips
             clips = []
             valid_image_idx = 0
@@ -704,12 +870,19 @@ class VideoGenerator:
                     except AttributeError:
                         # Fallback for MoviePy 1.x
                         img_clip = img_clip.set_duration(duration)
+
+                    # Áp dụng Ken Burns effect nếu được bật
+                    if enable_ken_burns:
+                        img_clip = self.apply_ken_burns_effect(img_clip, duration, ken_burns_effect)
+
                     clips.append(img_clip)
 
                     if use_custom_durations:
-                        logger.info(f"✓ Added image {idx + 1}/{len(image_paths)}: {os.path.basename(img_path)} ({duration:.2f}s)")
+                        effect_info = f" [{ken_burns_effect}]" if enable_ken_burns else ""
+                        logger.info(f"✓ Added image {idx + 1}/{len(image_paths)}: {os.path.basename(img_path)} ({duration:.2f}s){effect_info}")
                     else:
-                        logger.info(f"✓ Added image {idx + 1}/{len(image_paths)}: {os.path.basename(img_path)}")
+                        effect_info = f" [{ken_burns_effect}]" if enable_ken_burns else ""
+                        logger.info(f"✓ Added image {idx + 1}/{len(image_paths)}: {os.path.basename(img_path)}{effect_info}")
 
                     valid_image_idx += 1
                 except Exception as e:
@@ -774,7 +947,9 @@ class VideoGenerator:
                                     image_prompts_path: str = None,
                                     chapter_content: str = None,
                                     srt_path: str = None,
-                                    language: str = 'vi') -> Dict[str, Any]:
+                                    language: str = 'vi',
+                                    enable_ken_burns: bool = True,
+                                    ken_burns_effect: str = 'random') -> Dict[str, Any]:
         """
         Tạo video từ thư mục chứa ảnh và audio
 
@@ -788,6 +963,8 @@ class VideoGenerator:
             chapter_content: Nội dung chapter gốc (fallback nếu không có SRT)
             srt_path: Đường dẫn đến file SRT (ưu tiên cao nhất cho sync)
             language: Mã ngôn ngữ (vi, en, ja, etc.)
+            enable_ken_burns: Bật/tắt hiệu ứng Pan/Zoom (Ken Burns)
+            ken_burns_effect: Loại hiệu ứng ('random', 'zoom_in', 'zoom_out', etc.)
 
         Returns:
             Dict với thông tin kết quả
@@ -907,7 +1084,9 @@ class VideoGenerator:
                 output_path=output_path,
                 fps=fps,
                 transition_duration=transition_duration,
-                image_durations=image_durations
+                image_durations=image_durations,
+                enable_ken_burns=enable_ken_burns,
+                ken_burns_effect=ken_burns_effect
             )
             
         except Exception as e:
@@ -917,7 +1096,8 @@ class VideoGenerator:
 
 def create_video_sync(image_dir: str, audio_path: str, output_path: str = None,
                       image_prompts_path: str = None, chapter_content: str = None,
-                      srt_path: str = None, **kwargs) -> Dict[str, Any]:
+                      srt_path: str = None, enable_ken_burns: bool = True,
+                      ken_burns_effect: str = 'random', **kwargs) -> Dict[str, Any]:
     """
     Synchronous wrapper để tạo video từ thư mục ảnh và audio
 
@@ -928,13 +1108,16 @@ def create_video_sync(image_dir: str, audio_path: str, output_path: str = None,
         image_prompts_path: Đường dẫn đến file image_prompts.json (để sync tốt hơn)
         chapter_content: Nội dung chapter gốc (fallback cho sync)
         srt_path: Đường dẫn đến file SRT (ưu tiên cao nhất cho sync)
+        enable_ken_burns: Bật/tắt hiệu ứng Pan/Zoom (Ken Burns) - mặc định True
+        ken_burns_effect: Loại hiệu ứng ('random', 'zoom_in', 'zoom_out', 'pan_left',
+                         'pan_right', 'pan_up', 'pan_down', 'zoom_in_pan', 'zoom_out_pan')
         **kwargs: Các tham số bổ sung
 
     Returns:
         Dict với thông tin kết quả
 
     Example:
-        # Tạo video với sync chính xác từ SRT (khuyến nghị)
+        # Tạo video với Ken Burns effect ngẫu nhiên (mặc định)
         result = create_video_sync(
             image_dir="audio_downloads/vi/tam_cam/images/chapter_1",
             audio_path="audio_downloads/vi/tam_cam/1_1.wav",
@@ -942,12 +1125,18 @@ def create_video_sync(image_dir: str, audio_path: str, output_path: str = None,
             srt_path="audio_downloads/vi/tam_cam/subtitles/1_1.srt"
         )
 
-        # Hoặc với sync ước tính từ text (fallback)
+        # Tạo video chỉ với zoom in effect
         result = create_video_sync(
             image_dir="audio_downloads/vi/tam_cam/images/chapter_1",
             audio_path="audio_downloads/vi/tam_cam/1_1.wav",
-            image_prompts_path="audio_downloads/vi/tam_cam/image_prompts/1_chapter_1.json",
-            chapter_content="Ngày xưa có cô Tấm..."
+            ken_burns_effect='zoom_in'
+        )
+
+        # Tắt Ken Burns effect (ảnh tĩnh)
+        result = create_video_sync(
+            image_dir="audio_downloads/vi/tam_cam/images/chapter_1",
+            audio_path="audio_downloads/vi/tam_cam/1_1.wav",
+            enable_ken_burns=False
         )
     """
     try:
@@ -959,6 +1148,8 @@ def create_video_sync(image_dir: str, audio_path: str, output_path: str = None,
             image_prompts_path=image_prompts_path,
             chapter_content=chapter_content,
             srt_path=srt_path,
+            enable_ken_burns=enable_ken_burns,
+            ken_burns_effect=ken_burns_effect,
             **kwargs
         )
     except Exception as e:
