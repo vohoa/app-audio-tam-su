@@ -35,10 +35,12 @@ class VideoLogoWorker(QThread):
     def __init__(self, video_path: str, logo_path: str, output_path: str,
                  logo_mode: str, logo_size: int, position: str,
                  motion_speed: float = 1.0, opacity: float = 0.8,
-                 add_intro: bool = True):
+                 add_intro: bool = True, floating_logo_path: str = None,
+                 intro_path: str = None):
         super().__init__()
         self.video_path = video_path
-        self.logo_path = logo_path
+        self.logo_path = logo_path  # Static logo (default at top-right)
+        self.floating_logo_path = floating_logo_path  # Floating/animated logo
         self.output_path = output_path
         self.logo_mode = logo_mode
         self.logo_size = logo_size
@@ -48,8 +50,11 @@ class VideoLogoWorker(QThread):
         self.add_intro = add_intro
         self.should_stop = False
 
-        # Check for intro video
-        self.intro_path = os.path.join(os.path.dirname(__file__), 'assets', 'intro.mp4')
+        # Use provided intro path or default
+        if intro_path:
+            self.intro_path = intro_path
+        else:
+            self.intro_path = os.path.join(os.path.dirname(__file__), 'assets', 'intro.mp4')
 
     def run(self):
         intro_clip = None
@@ -77,8 +82,10 @@ class VideoLogoWorker(QThread):
                     # Resize intro to match main video size if needed
                     if intro_clip.size != (video_w, video_h):
                         if hasattr(intro_clip, 'resized'):
-                            intro_clip = intro_clip.resized(newsize=(video_w, video_h))
+                            # MoviePy 2.x uses resized() with different parameters
+                            intro_clip = intro_clip.resized((video_w, video_h))
                         else:
+                            # MoviePy 1.x uses resize()
                             intro_clip = intro_clip.resize(newsize=(video_w, video_h))
 
                     # Concatenate intro + main video
@@ -98,134 +105,174 @@ class VideoLogoWorker(QThread):
                 self.finished.emit(False, 'Đã hủy')
                 return
 
-            self.progress.emit('Đang tải logo...')
-            self.progress_percent.emit(20)
+            # Prepare video clips list for compositing
+            clips_to_composite = [video]
+            logos_to_close = []
 
-            # Load and prepare logo - compatible with MoviePy 1.x and 2.x
-            # Logo duration = total video duration (intro + main if intro exists)
-            logo = ImageClip(self.logo_path, duration=video.duration)
+            video_w, video_h = video.size
 
-            # Resize logo
-            if hasattr(logo, 'resized'):
-                # MoviePy 2.x
-                logo = logo.resized(height=self.logo_size)
-            else:
-                # MoviePy 1.x
-                logo = logo.resize(height=self.logo_size)
+            # 1. Load static logo (default logo at top-right)
+            if self.logo_path:
+                self.progress.emit('Đang tải logo tĩnh (mặc định)...')
+                self.progress_percent.emit(20)
 
-            # Set logo opacity
-            if self.opacity < 1.0:
-                if hasattr(logo, 'with_opacity'):
-                    # MoviePy 2.x
-                    logo = logo.with_opacity(self.opacity)
+                static_logo = ImageClip(self.logo_path, duration=video.duration)
+
+                # Resize to fixed 100x100 for default logo
+                if hasattr(static_logo, 'resized'):
+                    static_logo = static_logo.resized(height=100)
                 else:
-                    # MoviePy 1.x
-                    logo = logo.set_opacity(self.opacity)
+                    static_logo = static_logo.resize(height=100)
 
-            logo_w, logo_h = logo.size
+                # Set opacity
+                if hasattr(static_logo, 'with_opacity'):
+                    static_logo = static_logo.with_opacity(0.8)
+                else:
+                    static_logo = static_logo.set_opacity(0.8)
+
+                # Always position at top-right
+                margin = 20
+                static_logo_w, static_logo_h = static_logo.size
+                static_pos = (video_w - static_logo_w - margin, margin)
+
+                if hasattr(static_logo, 'with_position'):
+                    static_logo = static_logo.with_position(static_pos)
+                else:
+                    static_logo = static_logo.set_position(static_pos)
+
+                clips_to_composite.append(static_logo)
+                logos_to_close.append(static_logo)
+                logger.info(f"Static logo added at top-right: {self.logo_path}")
+
+            # 2. Load floating logo (with animation)
+            floating_logo = None
+            if self.floating_logo_path:
+                self.progress.emit('Đang tải logo floating...')
+                self.progress_percent.emit(25)
+
+                floating_logo = ImageClip(self.floating_logo_path, duration=video.duration)
+
+                # Resize logo
+                if hasattr(floating_logo, 'resized'):
+                    floating_logo = floating_logo.resized(height=self.logo_size)
+                else:
+                    floating_logo = floating_logo.resize(height=self.logo_size)
+
+                # Set logo opacity
+                if self.opacity < 1.0:
+                    if hasattr(floating_logo, 'with_opacity'):
+                        floating_logo = floating_logo.with_opacity(self.opacity)
+                    else:
+                        floating_logo = floating_logo.set_opacity(self.opacity)
+
+                logo_w, logo_h = floating_logo.size
+                logos_to_close.append(floating_logo)
+
+                if self.should_stop:
+                    video.close()
+                    for logo in logos_to_close:
+                        logo.close()
+                    self.finished.emit(False, 'Đã hủy')
+                    return
+
+                self.progress.emit(f'Đang áp dụng hiệu ứng floating logo: {self.logo_mode}')
+                self.progress_percent.emit(30)
+
+                # Helper function to set position (compatible with both versions)
+                def apply_position(clip, pos):
+                    if hasattr(clip, 'with_position'):
+                        return clip.with_position(pos)
+                    else:
+                        return clip.set_position(pos)
+
+                # Helper function to set opacity with function (compatible with both versions)
+                def apply_opacity(clip, opacity_func):
+                    if hasattr(clip, 'with_opacity'):
+                        return clip.with_opacity(opacity_func)
+                    else:
+                        return clip.set_opacity(opacity_func)
+
+                # Apply position/motion based on mode
+                if self.logo_mode == 'static':
+                    floating_logo = apply_position(floating_logo, self._get_static_position(video_w, video_h, logo_w, logo_h))
+
+                elif self.logo_mode == 'sine_wave':
+                    # Di chuyển theo sóng sin (lên xuống)
+                    def sine_position(t):
+                        x_pos = self._get_x_position(video_w, logo_w)
+                        y_offset = 30 * math.sin(t * self.motion_speed)
+                        base_y = self._get_base_y(video_h, logo_h)
+                        return (x_pos, base_y + y_offset)
+                    floating_logo = apply_position(floating_logo, sine_position)
+
+                elif self.logo_mode == 'cosine_wave':
+                    # Di chuyển theo sóng cos (trái phải)
+                    def cosine_position(t):
+                        y_pos = self._get_base_y(video_h, logo_h)
+                        x_offset = 30 * math.cos(t * self.motion_speed)
+                        base_x = self._get_x_position(video_w, logo_w)
+                        return (base_x + x_offset, y_pos)
+                    floating_logo = apply_position(floating_logo, cosine_position)
+
+                elif self.logo_mode == 'circular':
+                    # Di chuyển theo hình tròn
+                    def circular_position(t):
+                        base_x = self._get_x_position(video_w, logo_w)
+                        base_y = self._get_base_y(video_h, logo_h)
+                        radius = 40
+                        x = base_x + radius * math.cos(t * self.motion_speed)
+                        y = base_y + radius * math.sin(t * self.motion_speed)
+                        return (x, y)
+                    floating_logo = apply_position(floating_logo, circular_position)
+
+                elif self.logo_mode == 'slow_drift':
+                    # Di chuyển chậm khắp màn hình
+                    def drift_position(t):
+                        # Sử dụng nhiều tần số sin/cos khác nhau để tạo chuyển động phức tạp
+                        x = (video_w - logo_w) * (0.5 + 0.4 * math.sin(t * self.motion_speed * 0.1))
+                        y = (video_h - logo_h) * (0.5 + 0.4 * math.cos(t * self.motion_speed * 0.13))
+                        return (int(x), int(y))
+                    floating_logo = apply_position(floating_logo, drift_position)
+
+                elif self.logo_mode == 'random_blink':
+                    # Hiện/ẩn ngẫu nhiên ở các vị trí khác nhau
+                    positions = self._generate_random_positions(video_w, video_h, logo_w, logo_h,
+                                                               int(video.duration * 2))
+
+                    def random_position(t):
+                        # Chọn vị trí dựa trên thời gian
+                        index = int(t * 2) % len(positions)
+                        return positions[index]
+
+                    # Tạo hiệu ứng nhấp nháy bằng cách thay đổi opacity
+                    def blink_opacity(t):
+                        # Hiện trong 0.8s, ẩn trong 0.2s mỗi giây
+                        return self.opacity if (t % 1.0) < 0.8 else 0
+
+                    floating_logo = apply_position(floating_logo, random_position)
+                    floating_logo = apply_opacity(floating_logo, blink_opacity)
+
+                # Add floating logo to composite
+                clips_to_composite.append(floating_logo)
+                logger.info(f"Floating logo added with mode: {self.logo_mode}")
 
             if self.should_stop:
                 video.close()
-                logo.close()
-                self.finished.emit(False, 'Đã hủy')
-                return
-
-            self.progress.emit(f'Đang áp dụng hiệu ứng: {self.logo_mode}')
-            self.progress_percent.emit(30)
-
-            # Helper function to set position (compatible with both versions)
-            def apply_position(clip, pos):
-                if hasattr(clip, 'with_position'):
-                    # MoviePy 2.x
-                    return clip.with_position(pos)
-                else:
-                    # MoviePy 1.x
-                    return clip.set_position(pos)
-
-            # Helper function to set opacity with function (compatible with both versions)
-            def apply_opacity(clip, opacity_func):
-                if hasattr(clip, 'with_opacity'):
-                    # MoviePy 2.x
-                    return clip.with_opacity(opacity_func)
-                else:
-                    # MoviePy 1.x
-                    return clip.set_opacity(opacity_func)
-
-            # Apply position/motion based on mode
-            if self.logo_mode == 'static':
-                logo = apply_position(logo, self._get_static_position(video_w, video_h, logo_w, logo_h))
-
-            elif self.logo_mode == 'sine_wave':
-                # Di chuyển theo sóng sin (lên xuống)
-                def sine_position(t):
-                    x_pos = self._get_x_position(video_w, logo_w)
-                    y_offset = 30 * math.sin(t * self.motion_speed)
-                    base_y = self._get_base_y(video_h, logo_h)
-                    return (x_pos, base_y + y_offset)
-                logo = apply_position(logo, sine_position)
-
-            elif self.logo_mode == 'cosine_wave':
-                # Di chuyển theo sóng cos (trái phải)
-                def cosine_position(t):
-                    y_pos = self._get_base_y(video_h, logo_h)
-                    x_offset = 30 * math.cos(t * self.motion_speed)
-                    base_x = self._get_x_position(video_w, logo_w)
-                    return (base_x + x_offset, y_pos)
-                logo = apply_position(logo, cosine_position)
-
-            elif self.logo_mode == 'circular':
-                # Di chuyển theo hình tròn
-                def circular_position(t):
-                    base_x = self._get_x_position(video_w, logo_w)
-                    base_y = self._get_base_y(video_h, logo_h)
-                    radius = 40
-                    x = base_x + radius * math.cos(t * self.motion_speed)
-                    y = base_y + radius * math.sin(t * self.motion_speed)
-                    return (x, y)
-                logo = apply_position(logo, circular_position)
-
-            elif self.logo_mode == 'slow_drift':
-                # Di chuyển chậm khắp màn hình
-                def drift_position(t):
-                    # Sử dụng nhiều tần số sin/cos khác nhau để tạo chuyển động phức tạp
-                    x = (video_w - logo_w) * (0.5 + 0.4 * math.sin(t * self.motion_speed * 0.1))
-                    y = (video_h - logo_h) * (0.5 + 0.4 * math.cos(t * self.motion_speed * 0.13))
-                    return (int(x), int(y))
-                logo = apply_position(logo, drift_position)
-
-            elif self.logo_mode == 'random_blink':
-                # Hiện/ẩn ngẫu nhiên ở các vị trí khác nhau
-                positions = self._generate_random_positions(video_w, video_h, logo_w, logo_h,
-                                                           int(video.duration * 2))
-
-                def random_position(t):
-                    # Chọn vị trí dựa trên thời gian
-                    index = int(t * 2) % len(positions)
-                    return positions[index]
-
-                # Tạo hiệu ứng nhấp nháy bằng cách thay đổi opacity
-                def blink_opacity(t):
-                    # Hiện trong 0.8s, ẩn trong 0.2s mỗi giây
-                    return self.opacity if (t % 1.0) < 0.8 else 0
-
-                logo = apply_position(logo, random_position)
-                logo = apply_opacity(logo, blink_opacity)
-
-            if self.should_stop:
-                video.close()
-                logo.close()
+                for logo in logos_to_close:
+                    logo.close()
                 self.finished.emit(False, 'Đã hủy')
                 return
 
             self.progress.emit('Đang kết hợp video và logo...')
             self.progress_percent.emit(50)
 
-            # Composite video with logo
-            final_video = CompositeVideoClip([video, logo])
+            # Composite video with all logos
+            final_video = CompositeVideoClip(clips_to_composite)
 
             if self.should_stop:
                 video.close()
-                logo.close()
+                for logo in logos_to_close:
+                    logo.close()
                 final_video.close()
                 self.finished.emit(False, 'Đã hủy')
                 return
@@ -251,7 +298,8 @@ class VideoLogoWorker(QThread):
             main_video.close()
             if intro_clip:
                 intro_clip.close()
-            logo.close()
+            for logo in logos_to_close:
+                logo.close()
             final_video.close()
 
             if self.should_stop:
@@ -341,10 +389,18 @@ class VideoLogoInserterDialog(QDialog):
 
         self.video_path = None
         self.logo_path = None
+        self.floating_logo_path = None  # Separate floating logo
+        self.intro_path = None  # Intro video path
         self.worker = None
 
         # Check for default logo
         self.default_logo_path = os.path.join(os.path.dirname(__file__), 'logo', 'default.png')
+
+        # Check for default floating logo
+        self.default_floating_logo_path = os.path.join(os.path.dirname(__file__), 'logo', 'floating.png')
+
+        # Check for default intro
+        self.default_intro_path = os.path.join(os.path.dirname(__file__), 'assets', 'intro.mp4')
 
         self.init_ui()
 
@@ -385,38 +441,64 @@ class VideoLogoInserterDialog(QDialog):
         logo_layout.addWidget(logo_btn)
         file_layout.addLayout(logo_layout)
 
-        # Intro checkbox
+        # Intro video selection
         intro_layout = QHBoxLayout()
-        self.intro_checkbox = QCheckBox('Thêm intro video (assets/intro.mp4)')
+        self.intro_checkbox = QCheckBox('Ghép intro video')
 
-        # Check if intro exists and set default
-        intro_path = os.path.join(os.path.dirname(__file__), 'assets', 'intro.mp4')
-        if os.path.exists(intro_path):
-            self.intro_checkbox.setChecked(True)  # Default ON if intro exists
-            self.intro_checkbox.setStyleSheet('color: green;')
-            # Get intro duration
-            try:
-                intro_clip = VideoFileClip(intro_path)
-                intro_duration = intro_clip.duration
-                intro_clip.close()
-                self.intro_checkbox.setText(f'Thêm intro video ({intro_duration:.1f}s) - assets/intro.mp4')
-            except:
-                pass
+        # Set default intro path if exists
+        if os.path.exists(self.default_intro_path):
+            self.intro_path = self.default_intro_path
+            self.intro_checkbox.setChecked(True)
+            self.intro_label = QLabel('assets/intro.mp4 (mặc định)')
+            self.intro_label.setStyleSheet('color: blue; font-style: italic;')
         else:
             self.intro_checkbox.setChecked(False)
-            self.intro_checkbox.setEnabled(False)  # Disable if not exists
-            self.intro_checkbox.setStyleSheet('color: gray;')
-            self.intro_checkbox.setText('Thêm intro video (không tìm thấy assets/intro.mp4)')
+            self.intro_label = QLabel('Chưa chọn intro')
+            self.intro_label.setStyleSheet('color: gray;')
 
+        intro_btn = QPushButton('Chọn Intro')
+        intro_btn.clicked.connect(self.select_intro)
         intro_layout.addWidget(self.intro_checkbox)
+        intro_layout.addWidget(self.intro_label, 1)
+        intro_layout.addWidget(intro_btn)
         file_layout.addLayout(intro_layout)
+
+        # Floating logo selection (additional logo that moves)
+        floating_layout = QHBoxLayout()
+
+        # Set default floating logo if exists
+        if os.path.exists(self.default_floating_logo_path):
+            self.floating_logo_path = self.default_floating_logo_path
+            self.floating_logo_label = QLabel('floating.png (mặc định)')
+            self.floating_logo_label.setStyleSheet('color: blue; font-style: italic;')
+        else:
+            self.floating_logo_label = QLabel('Chưa chọn logo floating')
+            self.floating_logo_label.setStyleSheet('color: gray;')
+
+        floating_btn = QPushButton('Chọn Logo Floating')
+        floating_btn.clicked.connect(self.select_floating_logo)
+        floating_layout.addWidget(QLabel('Logo Floating:'))
+        floating_layout.addWidget(self.floating_logo_label, 1)
+        floating_layout.addWidget(floating_btn)
+        file_layout.addLayout(floating_layout)
+
+        # Info about floating logo
+        info_label = QLabel('💡 Logo floating: logo di chuyển độc lập, ngoài logo mặc định tĩnh')
+        info_label.setStyleSheet('color: #666; font-size: 10px; font-style: italic;')
+        file_layout.addWidget(info_label)
 
         file_group.setLayout(file_layout)
         layout.addWidget(file_group)
 
-        # Logo mode selection
-        mode_group = QGroupBox('Chế Độ Logo')
+        # Logo mode selection (for floating logo only)
+        mode_group = QGroupBox('Chế Độ Logo Floating')
         mode_layout = QVBoxLayout()
+
+        # Add note
+        mode_note = QLabel('Chế độ chỉ áp dụng cho Logo Floating. Logo mặc định luôn tĩnh ở góc trên phải.')
+        mode_note.setStyleSheet('color: #888; font-size: 9px; font-style: italic;')
+        mode_note.setWordWrap(True)
+        mode_layout.addWidget(mode_note)
 
         self.mode_group = QButtonGroup()
 
@@ -555,10 +637,10 @@ class VideoLogoInserterDialog(QDialog):
             self.check_ready()
 
     def select_logo(self):
-        """Select logo file"""
+        """Select static logo file (for default logo override)"""
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            'Chọn Logo',
+            'Chọn Logo Tĩnh (Override logo mặc định)',
             '',
             'Image Files (*.png *.jpg *.jpeg *.gif);;All Files (*)'
         )
@@ -568,6 +650,36 @@ class VideoLogoInserterDialog(QDialog):
             self.logo_label.setText(os.path.basename(file_path))
             self.logo_label.setStyleSheet('color: green;')
             self.check_ready()
+
+    def select_floating_logo(self):
+        """Select floating logo file (animated logo)"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            'Chọn Logo Floating (Di chuyển)',
+            '',
+            'Image Files (*.png *.jpg *.jpeg *.gif);;All Files (*)'
+        )
+
+        if file_path:
+            self.floating_logo_path = file_path
+            self.floating_logo_label.setText(os.path.basename(file_path))
+            self.floating_logo_label.setStyleSheet('color: green;')
+
+    def select_intro(self):
+        """Select intro video file"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            'Chọn Video Intro',
+            '',
+            'Video Files (*.mp4 *.avi *.mov *.mkv);;All Files (*)'
+        )
+
+        if file_path:
+            self.intro_path = file_path
+            self.intro_label.setText(os.path.basename(file_path))
+            self.intro_label.setStyleSheet('color: green;')
+            # Auto-check the checkbox when intro is selected
+            self.intro_checkbox.setChecked(True)
 
     def check_ready(self):
         """Check if ready to process"""
@@ -648,14 +760,16 @@ class VideoLogoInserterDialog(QDialog):
         # Start worker
         self.worker = VideoLogoWorker(
             self.video_path,
-            logo_to_use,  # Use default logo if no logo selected
+            logo_to_use,  # Static logo (default at top-right)
             output_path,
             logo_mode,
             logo_size,
             position,
             motion_speed,
             opacity,
-            add_intro  # Add intro video if checked
+            add_intro,  # Add intro video if checked
+            self.floating_logo_path,  # Floating/animated logo
+            self.intro_path  # Intro video path
         )
         self.worker.progress.connect(self.on_progress)
         self.worker.progress_percent.connect(self.on_progress_percent)
