@@ -2504,7 +2504,13 @@ class MainWindow(QMainWindow):
 
         manage_channel_intro_action = settings_menu.addAction('🎙️ Quản Lý Channel Intro')
         manage_channel_intro_action.triggered.connect(self.show_channel_intro_manager)
-        
+
+        # Video Tools menu
+        video_menu = menubar.addMenu('🎬 Video Tools')
+
+        logo_inserter_action = video_menu.addAction('🖼️ Chèn Logo Vào Video')
+        logo_inserter_action.triggered.connect(self.show_logo_inserter)
+
         # Central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -3038,6 +3044,18 @@ class MainWindow(QMainWindow):
 
         except Exception as e:
             error_msg = f'Lỗi khi mở quản lý channel intro: {str(e)}'
+            logger.error(error_msg, exc_info=True)
+            QMessageBox.critical(self, 'Lỗi', error_msg)
+
+    def show_logo_inserter(self):
+        """Show video logo inserter dialog"""
+        try:
+            from video_logo_inserter import VideoLogoInserterDialog
+            dialog = VideoLogoInserterDialog(self)
+            dialog.exec_()
+
+        except Exception as e:
+            error_msg = f'Lỗi khi mở công cụ chèn logo: {str(e)}'
             logger.error(error_msg, exc_info=True)
             QMessageBox.critical(self, 'Lỗi', error_msg)
 
