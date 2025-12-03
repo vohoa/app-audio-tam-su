@@ -166,7 +166,7 @@ class PerplexityAIAutomation:
                 options=options,
                 browser_executable_path=self.chrome_binary_path,
                 use_subprocess=True,
-                # version_main=141  # Chỉ định version Chrome để tải đúng ChromeDriver
+                version_main=142  # Chỉ định version Chrome để tải đúng ChromeDriver
             )
             
             self.wait = WebDriverWait(self.driver, 20)
