@@ -24,7 +24,7 @@ Trả về **ĐÚNG VÀ CHỈ JSON** hợp lệ trong khối code, theo cấu tr
       "context": "mô tả ngắn tình huống",
       "emotion": "tường thuật",
       "order_in_story": 1,
-      "voice": "aoede",
+      "voice": "leda",
       "characteristics": "Giọng kể chuyện nhẹ nhàng, thoải mái, rõ ràng"
     },
     {
@@ -37,7 +37,7 @@ Trả về **ĐÚNG VÀ CHỈ JSON** hợp lệ trong khối code, theo cấu tr
       "context": "mô tả ngắn tình huống",
       "emotion": "vui|buồn|tức giận|lo lắng|bình thường|hào hứng",
       "order_in_story": 2,
-      "voice": "tên-giọng-phù-hợp-với-nhân-vật",
+      "voice": "leda hoặc puck (tùy gender)",
       "characteristics": "mô tả chất giọng và phong thái"
     },
     {
@@ -50,7 +50,7 @@ Trả về **ĐÚNG VÀ CHỈ JSON** hợp lệ trong khối code, theo cấu tr
       "context": "mô tả tình huống",
       "emotion": "tường thuật",
       "order_in_story": 3,
-      "voice": "aoede",
+      "voice": "leda",
       "characteristics": "Giọng kể chuyện nhẹ nhàng, thoải mái, rõ ràng"
     }
   ]
@@ -58,8 +58,8 @@ Trả về **ĐÚNG VÀ CHỈ JSON** hợp lệ trong khối code, theo cấu tr
 ```
 
 **LƯU Ý QUAN TRỌNG:**
-- Tất cả đoạn narrator PHẢI có `speaker_id = 1`, `voice = "aoede"`, `gender = "female"`, `role = "narrator"`
-- Đảm bảo narrator xuất hiện nhất quán xuyên suốt với cùng một giọng nữ (aoede)
+- Tất cả đoạn narrator PHẢI có `speaker_id = 1`, `voice = "leda"`, `gender = "female"`, `role = "narrator"`
+- Đảm bảo narrator xuất hiện nhất quán xuyên suốt với cùng một giọng nữ (leda)
 
 ===QUY TẮC XỬ LÝ - ĐỌC KỸ===
 
@@ -67,7 +67,7 @@ Trả về **ĐÚNG VÀ CHỈ JSON** hợp lệ trong khối code, theo cấu tr
 *   **LỜI THOẠI**: Là các đoạn nằm trong dấu ngoặc kép ("...") hoặc đi kèm các động từ như "nói", "hỏi", "đáp", "quát", "thì thầm".
 *   **DẪN TRUYỆN**: Mọi phần còn lại (miêu tả, tường thuật, hành động, suy nghĩ).
     *   Gán `role = "narrator"`, `emotion = "tường thuật"`, `gender = "female"`
-    *   **QUAN TRỌNG**: `voice = "aoede"` (giọng nữ) cho TẤT CẢ đoạn dẫn truyện - PHẢI THỐNG NHẤT từ đầu đến cuối, KHÔNG được thay đổi hoặc chen lẫn giọng khác.
+    *   **QUAN TRỌNG**: `voice = "leda"` (giọng nữ) cho TẤT CẢ đoạn dẫn truyện - PHẢI THỐNG NHẤT từ đầu đến cuối, KHÔNG được thay đổi hoặc chen lẫn giọng khác.
 
 **2. Thứ tự và tách biệt:**
 *   Đánh số `order_in_story` tăng dần từ 1.
@@ -76,30 +76,12 @@ Trả về **ĐÚNG VÀ CHỈ JSON** hợp lệ trong khối code, theo cấu tr
 *   Xử lý tuần tự từ đầu đến cuối văn bản.
 
 **3. Chọn giọng đọc (Trường `voice`):**
-Chỉ chọn MỘT giọng từ danh sách của Gemini API dưới đây, dựa trên `gender` và `age_category`.
+**QUY TẮC ĐƠN GIẢN - BẮT BUỘC TUÂN THỦ:**
 
-*   **Dẫn truyện (Giọng trung tính, rõ ràng)**:
-    *   **aoede**: Giọng nữ, nhẹ nhàng, thoải mái (Breezy) - KHUYẾN KHÍCH cho narrator nữ.
-    *   **vindemiatrix**: Giọng nữ, êm dịu, nhẹ nhàng - phù hợp narrator nữ.
-    *   **schedar**: Giọng nam, đều đặn (Even) - phù hợp narrator nam.
-    *   **zubenelgenubi**: Giọng nam, thoải mái (Casual) - phù hợp narrator nam.
-    *   **algieba**: Giọng nam, mượt mà (Smooth).
-*   **Giọng Nữ**:
-    *   **sulafat**: Ấm áp (Warm) - phù hợp vai mẹ, cô giáo.
-    *   **sadachbia**: Sôi nổi, hoạt bát.
-    *   **autonoe**: Tươi sáng (Bright).
-    *   **leda**: Trẻ trung (Youthful) - giọng nữ trẻ.
-*   **Giọng Nam**:
-    *   **gacrux**: Trưởng thành (Mature) - phù hợp vai cha, người lớn tuổi.
-    *   **rasalgethi**: Mang tính thông tin (Informative) - phù hợp vai học giả, người có chiều sâu.
-    *   **charon**: Chắc chắn, có quyền uy.
-    *   **fenrir**: Mạnh mẽ, kiên định.
-    *   **zephyr**: Tươi sáng (Bright) - giọng nam trẻ.
-    *   **puck**: Sôi nổi (Upbeat) - giọng nam trẻ, năng động.
-*   **Các giọng khác**:
-    *   **kore**: Quyết đoán (Firm) - phù hợp vai nữ có quyền uy.
-    *   **alnilam**: Kiên định (Firm) - phù hợp vai nam có quyền uy.
-    *   **enceladus**: Thì thầm (Breathy).
+*   **Narrator và TẤT CẢ nhân vật nữ**: LUÔN dùng `"leda"` (giọng nữ trẻ trung)
+*   **TẤT CẢ nhân vật nam**: LUÔN dùng `"puck"` (giọng nam sôi nổi, năng động)
+
+**KHÔNG** chọn giọng khác. **KHÔNG** phân loại theo age_category, role, hay emotion.
 
 **4. Metadata:**
 *   **name**: Điền tên nhân vật nếu có. Nếu không, để rỗng hoặc ghi vai vế (ví dụ: Mẹ, Ông lão). Với narrator, để rỗng hoặc ghi "Người dẫn truyện".
@@ -107,8 +89,9 @@ Chỉ chọn MỘT giọng từ danh sách của Gemini API dưới đây, dựa
 *   **emotion**: Chọn một nhãn cảm xúc phù hợp. Dẫn truyện luôn là "tường thuật".
 *   **characteristics**: Mô tả thêm về giọng điệu mong muốn để AI diễn đạt tốt hơn, ví dụ: thì thầm và lo lắng, gằn giọng một cách giận dữ, nói nhanh và hào hứng.
 *   **voice**:
-    *   Narrator: BẮT BUỘC dùng `"aoede"` (giọng nữ) cho TẤT CẢ đoạn dẫn truyện (đảm bảo tính thống nhất).
-    *   Nhân vật: Chọn voice phù hợp với gender và age_category từ danh sách trên.
+    *   **Narrator**: BẮT BUỘC dùng `"leda"` cho TẤT CẢ đoạn dẫn truyện.
+    *   **Nhân vật nữ**: BẮT BUỘC dùng `"leda"`.
+    *   **Nhân vật nam**: BẮT BUỘC dùng `"puck"`.
 
 Không giải thích, không ví dụ, không chú thích - **CHỈ TRẢ VỀ JSON** trong khối code.
 

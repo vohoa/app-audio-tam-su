@@ -404,29 +404,37 @@ class SeleniumAudioGenerator:
         """
         try:
             # Extract segment data
-            segment_text_1, voice_name_1, characteristics_1, role1 = segment_pair[0]
+            segment_text_1, voice_name_1, characteristics_1, role1, gender_1, age_category_1 = segment_pair[0]
             
             if len(segment_pair) > 1:
-                segment_text_2, voice_name_2, characteristics_2, role2 = segment_pair[1]
+                segment_text_2, voice_name_2, characteristics_2, role2, gender_2, age_category_2 = segment_pair[1]
             else:
-                segment_text_2, voice_name_2, characteristics_2, role2 = "", "Puck", "", "narrator"
+                segment_text_2, voice_name_2, characteristics_2, role2, gender_2, age_category_2 = "", "Puck", "", "narrator", "", ""
             
             # Format prompt
             def get_action_word(role):
                 return "Read" if role.lower() == "narrator" else "Make"
 
             # Chuẩn hóa đặc điểm giọng cho narrator
-            def normalize_narrator_characteristics(characteristics, role):
-                if role.lower() == "narrator":
-                    return "Giọng kể chuyện truyền cảm, chân thực, rõ ràng và cuốn hút dành cho người lớn. Giọng ấm áp, sâu lắng, giàu cảm xúc như đang chia sẻ câu chuyện của chính mình."
-                return characteristics
+            def normalize_narrator_characteristics(characteristics, role, gender, age_category):
+                # if role.lower() == "narrator":
+                gender_desc = ""
+                if gender:
+                    gender_desc = f"Giọng {gender.lower()}, "
+
+                age_desc = ""
+                if age_category:
+                    age_desc = f"Độ tuổi: {age_category}, "
+
+                return f"{gender_desc}{age_desc}Giọng kể chuyện truyền cảm, chân thực, rõ ràng và cuốn hút dành cho người lớn. Giọng ấm áp, sâu lắng, giàu cảm xúc như đang chia sẻ câu chuyện của chính mình."
+                # return characteristics
 
             action_word_1 = get_action_word(role1)
             action_word_2 = get_action_word(role2)
 
             # Chuẩn hóa characteristics cho narrator
-            characteristics_1 = normalize_narrator_characteristics(characteristics_1, role1)
-            characteristics_2 = normalize_narrator_characteristics(characteristics_2, role2)
+            characteristics_1 = normalize_narrator_characteristics(characteristics_1, role1, gender_1, age_category_1)
+            characteristics_2 = normalize_narrator_characteristics(characteristics_2, role2, gender_2, age_category_2)
 
             # Capitalize voice names
             def capitalize_first_letter(text):

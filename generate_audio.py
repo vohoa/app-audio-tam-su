@@ -330,7 +330,7 @@ def create_segments_from_speakers(speakers):
                 f"{character_info}\n"
                 f"Đoạn thoại: \"{dialogue}\""
             )
-            pair.append((dialogue.strip(), voice, characteristics, role))
+            pair.append((dialogue.strip(), voice, characteristics, role, gender, age_category))
         
         # Chấp nhận cả trường hợp có 1 hoặc 2 đoạn trong pair
         if pair:
